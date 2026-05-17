@@ -17,47 +17,6 @@ app = Flask(__name__, static_url_path='', static_folder='static')
 CORS(app)  # Enable CORS for local development
 
 # ─────────────────────────────────────────────
-# GAME ROUTES (TEMPLATES & AUDIO)
-# ─────────────────────────────────────────────
-
-# --- SPRAWL ---
-@app.route('/Sprawl/index.html')
-def play_sprawl():
-    return send_from_directory('templates/templates_sprawl', 'index.html')
-
-@app.route('/Sprawl/<path:filename>')
-def serve_sprawl_static(filename):
-    return send_from_directory('static/static_sprawl', filename)
-
-# --- BLACK ICHOR ---
-@app.route('/Black-Ichor/index.html')
-def play_ichor():
-    return send_from_directory('templates/templates_ichor', 'index.html')
-
-@app.route('/Black-Ichor/<path:filename>')
-def serve_ichor_static(filename):
-    return send_from_directory('static/static_ichor/', filename)
-
-# --- WARDEN ---
-@app.route('/Warden/index.html')
-def play_warden():
-    return send_from_directory('templates/templates_warden', 'index.html')
-
-@app.route('/Warden/<path:filename>')
-def serve_warden_static(filename):
-    return send_from_directory('static/static_warden', filename)
-
-# --- GREYWAKE ---
-@app.route('/Greywake/index.html')
-def play_greywake():
-    return send_from_directory('templates/templates_greywake', 'index.html')
-
-@app.route('/Greywake/<path:filename>')
-def serve_greywake_static(filename):
-    return send_from_directory('static/static_greywake', filename)
-
-
-# ─────────────────────────────────────────────
 # MODEL SELECTION
 # ─────────────────────────────────────────────
 
@@ -73,8 +32,7 @@ IMAGE_MODEL = os.environ.get("IMAGE_MODEL", "imagen-4.0-fast-generate-001")
 # API CLIENTS
 # ─────────────────────────────────────────────
 
-#gemini_key = os.environ.get("GEMINI_API_KEY")
-gemini_key = 'AIzaSyDm1WYWcXgel9uMQ-3wQZsiVaDfCsy1DO8'
+gemini_key = os.environ.get("GEMINI_API_KEY")
 gemini_client = genai.Client(api_key=gemini_key) if gemini_key else None
 
 openai_key = os.environ.get("OPENAI_API_KEY")
