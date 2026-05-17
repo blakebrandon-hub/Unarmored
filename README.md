@@ -15,71 +15,6 @@ The world is unglamorous and tactile. Leather, mud, debt, iron. Combat is danger
 
 ---
 
-## Setup
-
-### Requirements
-
-- Python 3.10+
-- Flask
-- At least one API key: Gemini, OpenAI, or Anthropic
-
-### Installation
-
-```bash
-pip install flask flask-cors google-genai anthropic openai
-```
-
-### Configuration
-
-Set environment variables for whichever providers you want to use:
-
-```bash
-export GEMINI_API_KEY=your_key_here
-export OPENAI_API_KEY=your_key_here
-export ANTHROPIC_API_KEY=your_key_here
-```
-
-The narrator model and image model are configured at the top of `app.py`:
-
-```python
-NARRATOR_MODEL = "gemini-3-flash-preview"   # or a Claude/GPT model
-IMAGE_MODEL    = "imagen-4.0-fast-generate-001"
-```
-
-Model selection determines provider automatically. Any model name containing `claude` routes to Anthropic, `gemini` or `imagen` to Google, and `gpt` to OpenAI.
-
-### Running
-
-```bash
-python app.py
-```
-
-Then open `http://localhost:5000` in your browser.
-
----
-
-## Project Structure
-
-```
-/
-├── app.py                        # Flask backend, AI routing, API endpoints
-├── templates/
-│   └── index.html                # Unarmored game (full frontend + game logic)
-│   └── templates_sprawl/         # Other games served by the same backend
-│   └── templates_ichor/
-│   └── templates_warden/
-│   └── templates_greywake/
-├── static/
-│   └── static_sprawl/
-│   └── static_ichor/
-│   └── static_warden/
-│   └── static_greywake/
-└── ambient1-4.mp3                # Ambient audio tracks
-└── battle1-4.mp3                 # Combat audio tracks
-```
-
----
-
 ## Gameplay
 
 ### The Chronicle
@@ -238,6 +173,49 @@ A village. Tannery at the edge. The Grey Goose inn at the center. The priest kno
 | Day labor | 6–8 Haler |
 | Tanning Knife | 2 Groschen |
 | Sword | 8–18 Groschen |
+
+---
+
+## Setup
+
+### Requirements
+
+- Python 3.10+
+- Flask
+- At least one API key: Gemini, OpenAI, or Anthropic
+
+### Installation
+
+```bash
+pip install flask flask-cors google-genai anthropic openai
+```
+
+### Configuration
+
+Set environment variables for whichever providers you want to use:
+
+```bash
+export GEMINI_API_KEY=your_key_here
+export OPENAI_API_KEY=your_key_here
+export ANTHROPIC_API_KEY=your_key_here
+```
+
+The narrator model and image model are configured at the top of `app.py`:
+
+```python
+NARRATOR_MODEL = "gemini-3-flash-preview"   # or a Claude/GPT model
+IMAGE_MODEL    = "imagen-4.0-fast-generate-001"
+```
+
+Model selection determines provider automatically. Any model name containing `claude` routes to Anthropic, `gemini` or `imagen` to Google, and `gpt` to OpenAI.
+
+### Running
+
+```bash
+python app.py
+```
+
+Then open `http://localhost:5000` in your browser.
 
 ---
 
