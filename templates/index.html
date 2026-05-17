@@ -2444,7 +2444,7 @@ function craftRecipe(id, tab) {
   renderCraftTab(tab);
   renderEntry(`*You successfully crafted ${out.name}.*`, null, []);
   if (didGain) {
-    const skillTag = { type: 'skill', key: recipe.skill, delta: 1, raw: `[${recipe.skill}: +1]` };
+    const skillTag = { type: 'skill', key: recipe.skill, delta: 2, raw: `[${recipe.skill}: +2]` };
     renderEntry('', null, [skillTag]);
   }
 }
@@ -2482,7 +2482,7 @@ function useRecipe(id, tab) {
     updateUI();
     renderCraftTab(tab);
     renderEntry(`*The preparation goes wrong. Werner's hands know what went wrong before his mind does. The materials are spent.*`, null, []);
-    const useFailSkillTag = { type: 'skill', key: recipe.skill, delta: 1, raw: `[${recipe.skill}: +1]` };
+    const useFailSkillTag = { type: 'skill', key: recipe.skill, delta: 2, raw: `[${recipe.skill}: +2]` };
     renderEntry('', null, [useFailSkillTag]);
     return;
   }
@@ -2497,7 +2497,7 @@ function useRecipe(id, tab) {
   renderCraftTab(tab);
   renderEntry(`*You successfully crafted ${recipe.name}.*`, null, []);
   if (useDidGain) {
-    const useSkillTag = { type: 'skill', key: recipe.skill, delta: 1, raw: `[${recipe.skill}: +1]` };
+    const useSkillTag = { type: 'skill', key: recipe.skill, delta: 2, raw: `[${recipe.skill}: +2]` };
     renderEntry('', null, [useSkillTag]);
   }
 }
