@@ -1,0 +1,3598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UNARMORED</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400;1,600&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+:root {
+  --bg-void:        #0c0b09;
+  --bg-panel:       #110f0c;
+  --bg-panel-alt:   #161310;
+  --bg-entry:       #1a1714;
+  --border:         #2a2420;
+  --border-dim:     #1e1b17;
+  --border-lit:     #3d3530;
+
+  --text-main:      #c4b49a;
+  --text-dim:       #585040;
+  --text-bone:      #ddd0b8;
+  --text-parchment: #ede0c8;
+
+  --amber:          #c8902a;
+  --amber-dim:      #6b4c12;
+  --amber-bright:   #e8aa30;
+  --iron:           #6a7a82;
+  --iron-dim:       #3a4a52;
+  --blood:          #7a1e1e;
+  --blood-bright:   #a02828;
+  --smoke:          #48463c;
+  --smoke-bright:   #686458;
+
+  --font-title: 'Cinzel', serif;
+  --font-prose: 'Crimson Text', serif;
+  --font-ui:    'Share Tech Mono', monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  background: var(--bg-void);
+  color: var(--text-main);
+  font-family: var(--font-prose);
+  display: flex;
+  flex-direction: column;
+}
+
+/* noise */
+body::after {
+  content: '';
+  position: fixed; inset: 0; pointer-events: none; z-index: 999;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  opacity: 0.5;
+}
+
+/* ── HEADER ── */
+header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 24px; height: 44px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-panel);
+  flex-shrink: 0; z-index: 10;
+}
+.header-title {
+  font-family: var(--font-title);
+  font-size: 0.95rem; font-weight: 700;
+  letter-spacing: 8px; color: var(--text-bone);
+  text-transform: uppercase;
+}
+.header-sub {
+  font-family: var(--font-ui);
+  font-size: 0.58rem; letter-spacing: 3px;
+  color: var(--text-dim); text-transform: uppercase;
+}
+.header-turn {
+  font-family: var(--font-ui);
+  font-size: 0.6rem; letter-spacing: 2px; color: var(--amber);
+}
+
+/* ── LAYOUT ── */
+.layout {
+  display: grid;
+  grid-template-columns: 220px 1fr 260px;
+  flex: 1; overflow: hidden;
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-lit); border-radius: 2px; }
+
+/* ════════════════════════════════════════
+   LEFT PANEL
+════════════════════════════════════════ */
+.panel-left {
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  background: var(--bg-panel); overflow: hidden;
+}
+
+.panel-section {
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.panel-label {
+  font-family: var(--font-ui);
+  font-size: 0.5rem; letter-spacing: 3px;
+  text-transform: uppercase; color: var(--text-dim);
+  padding: 8px 14px 5px;
+  border-bottom: 1px solid var(--border-dim);
+}
+
+/* VOWS */
+.vows-body {
+  padding: 6px 0;
+  max-height: 180px; overflow-y: auto;
+}
+.vow-item {
+  padding: 7px 14px;
+  border-bottom: 1px solid var(--border-dim);
+  cursor: default;
+}
+.vow-item:last-child { border-bottom: none; }
+.vow-name {
+  font-family: var(--font-ui); font-size: 0.6rem;
+  color: var(--amber); letter-spacing: 1px;
+  text-transform: uppercase; margin-bottom: 2px;
+}
+.vow-obj {
+  font-family: var(--font-prose); font-size: 0.82rem;
+  color: var(--text-main); font-style: italic; line-height: 1.4;
+}
+.vow-pay {
+  font-family: var(--font-ui); font-size: 0.52rem;
+  color: var(--smoke-bright); margin-top: 3px; letter-spacing: 1px;
+}
+.vow-empty {
+  padding: 10px 14px;
+  font-family: var(--font-prose); font-size: 0.8rem;
+  color: var(--text-dim); font-style: italic;
+}
+
+/* INVENTORY */
+.inv-body {
+  flex: 1; overflow-y: auto; padding: 4px 0;
+}
+.inv-item {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 5px 14px;
+  border-bottom: 1px solid var(--border-dim);
+  font-size: 0.8rem;
+}
+.inv-item:last-child { border-bottom: none; }
+.inv-name { color: var(--text-bone); font-family: var(--font-prose); }
+.inv-meta {
+  font-family: var(--font-ui); font-size: 0.5rem;
+  color: var(--text-dim); letter-spacing: 1px; text-align: right;
+}
+.inv-meta .req { color: var(--blood-bright); }
+.inv-qty { color: var(--amber); font-family: var(--font-ui); font-size: 0.6rem; margin-left: 6px; }
+.inv-empty {
+  padding: 10px 14px;
+  font-family: var(--font-prose); font-size: 0.8rem;
+  color: var(--text-dim); font-style: italic;
+}
+
+/* EQUIPMENT SLOTS */
+.equip-body {
+  padding: 4px 0;
+}
+.equip-slot {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 4px 14px;
+  border-bottom: 1px solid var(--border-dim);
+  position: relative;
+}
+.equip-slot:last-child { border-bottom: none; }
+.equip-slot-name {
+  font-family: var(--font-ui); font-size: 0.48rem;
+  letter-spacing: 2px; color: var(--text-dim);
+  text-transform: uppercase; flex-shrink: 0; width: 46px;
+}
+.equip-slot-item {
+  font-family: var(--font-prose); font-size: 0.78rem;
+  color: var(--text-dim); font-style: italic;
+  cursor: pointer; text-align: right; flex: 1;
+  padding: 2px 4px; border-radius: 2px;
+  transition: color 0.15s;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.equip-slot-item.filled {
+  color: var(--text-bone); font-style: normal;
+}
+.equip-slot-item.filled:hover { color: var(--amber); }
+.equip-slot-item.empty:hover  { color: var(--text-main); }
+.equip-slot-item.unmet { color: var(--blood-bright); }
+
+/* EQUIP DROPDOWN */
+.equip-dropdown {
+  position: fixed; z-index: 1000;
+  background: var(--bg-panel-alt);
+  border: 1px solid var(--border-lit);
+  min-width: 160px; max-width: 220px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+}
+.equip-dropdown-item {
+  padding: 7px 12px;
+  font-family: var(--font-prose); font-size: 0.82rem;
+  color: var(--text-main); cursor: pointer;
+  border-bottom: 1px solid var(--border-dim);
+}
+.equip-dropdown-item:last-child { border-bottom: none; }
+.equip-dropdown-item:hover { background: rgba(200,144,42,0.08); color: var(--amber); }
+.equip-dropdown-item.unequip { color: var(--blood-bright); font-style: italic; }
+.equip-dropdown-item.unequip:hover { background: rgba(122,30,30,0.15); color: var(--blood-bright); }
+.equip-dropdown-item.dimmed { color: var(--text-dim); cursor: default; }
+.equip-dropdown-item.dimmed:hover { background: none; color: var(--text-dim); }
+
+/* ════════════════════════════════════════
+   CRAFTING PANEL
+════════════════════════════════════════ */
+#craft-panel {
+  display: none;
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(0,0,0,0.75);
+  align-items: center; justify-content: center;
+}
+#craft-panel.open { display: flex; }
+.craft-modal {
+  background: var(--bg-panel-alt);
+  border: 1px solid var(--border-lit);
+  width: 560px; max-height: 80vh;
+  display: flex; flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.8);
+}
+.craft-modal-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.craft-modal-title {
+  font-family: var(--font-ui); font-size: 0.55rem;
+  letter-spacing: 4px; text-transform: uppercase; color: var(--amber);
+}
+.craft-close {
+  font-family: var(--font-ui); font-size: 0.6rem;
+  color: var(--text-dim); cursor: pointer; background: none; border: none;
+  padding: 4px 8px;
+}
+.craft-close:hover { color: var(--text-main); }
+.craft-tabs {
+  display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.craft-tab {
+  font-family: var(--font-ui); font-size: 0.5rem;
+  letter-spacing: 2px; text-transform: uppercase;
+  padding: 8px 14px; cursor: pointer;
+  color: var(--text-dim); border: none; background: none;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+  transition: all 0.15s;
+}
+.craft-tab:hover { color: var(--text-main); }
+.craft-tab.active { color: var(--amber); border-bottom-color: var(--amber); }
+.craft-body { flex: 1; overflow-y: auto; padding: 8px 0; }
+.craft-recipe {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-dim);
+  display: flex; flex-direction: column; gap: 4px;
+}
+.craft-recipe:last-child { border-bottom: none; }
+.craft-recipe-header {
+  display: flex; justify-content: space-between; align-items: baseline;
+}
+.craft-recipe-name {
+  font-family: var(--font-prose); font-size: 0.9rem;
+  color: var(--text-bone);
+}
+.craft-recipe-stat {
+  font-family: var(--font-ui); font-size: 0.5rem;
+  color: var(--amber); letter-spacing: 1px;
+}
+.craft-recipe-ingredients {
+  font-family: var(--font-ui); font-size: 0.5rem;
+  color: var(--text-dim); letter-spacing: 1px;
+}
+.craft-recipe-ingredients .missing { color: var(--blood-bright); }
+.craft-recipe-footer {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 2px;
+}
+.craft-recipe-req {
+  font-family: var(--font-ui); font-size: 0.48rem;
+  color: var(--smoke-bright); letter-spacing: 1px;
+}
+.craft-recipe-req.unmet { color: var(--blood-bright); }
+.craft-btn {
+  font-family: var(--font-ui); font-size: 0.48rem;
+  letter-spacing: 2px; text-transform: uppercase;
+  padding: 5px 12px; cursor: pointer;
+  background: transparent; border: 1px solid var(--amber-dim);
+  color: var(--amber); transition: all 0.15s;
+}
+.craft-btn:hover { background: rgba(200,144,42,0.12); border-color: var(--amber); }
+.craft-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.craft-btn.use-btn {
+  border-color: var(--blood); color: var(--blood-bright);
+}
+.craft-btn.use-btn:hover { background: rgba(122,30,30,0.15); }
+.craft-location-notice {
+  padding: 12px 16px;
+  font-family: var(--font-prose); font-size: 0.82rem;
+  color: var(--text-dim); font-style: italic;
+  text-align: center;
+}
+.craft-forage-section {
+  padding: 12px 16px; border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.craft-forage-desc {
+  font-family: var(--font-prose); font-size: 0.82rem;
+  color: var(--text-dim); font-style: italic; margin-bottom: 8px;
+}
+
+/* STORAGE PANEL */
+#storage-panel {
+  display: none; position: fixed; inset: 0; z-index: 500;
+  background: rgba(0,0,0,0.75);
+  align-items: center; justify-content: center;
+}
+#storage-panel.open { display: flex; }
+.storage-modal {
+  background: var(--bg-panel-alt);
+  border: 1px solid var(--border-lit);
+  width: 520px; max-height: 80vh;
+  display: flex; flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.8);
+}
+.storage-modal-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.storage-modal-title {
+  font-family: var(--font-ui); font-size: 0.55rem;
+  letter-spacing: 4px; text-transform: uppercase; color: var(--amber);
+}
+.storage-cols {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 0; flex: 1; overflow: hidden; min-height: 0;
+}
+.storage-col {
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.storage-col:first-child { border-right: 1px solid var(--border); }
+.storage-col-label {
+  font-family: var(--font-ui); font-size: 0.48rem;
+  letter-spacing: 3px; text-transform: uppercase;
+  color: var(--text-dim); padding: 8px 12px;
+  border-bottom: 1px solid var(--border-dim); flex-shrink: 0;
+}
+.storage-items { flex: 1; overflow-y: auto; padding: 4px 0; }
+.storage-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 6px 12px; border-bottom: 1px solid var(--border-dim);
+  cursor: pointer; transition: background 0.15s;
+}
+.storage-item:last-child { border-bottom: none; }
+.storage-item:hover { background: rgba(200,144,42,0.06); }
+.storage-item-name {
+  font-family: var(--font-prose); font-size: 0.82rem; color: var(--text-bone);
+}
+.storage-item-meta {
+  font-family: var(--font-ui); font-size: 0.5rem;
+  color: var(--text-dim); letter-spacing: 1px;
+}
+.storage-empty {
+  font-family: var(--font-prose); font-size: 0.8rem;
+  color: var(--text-dim); font-style: italic;
+  padding: 12px;
+}
+
+#btn-skip {
+  position: fixed; bottom: 20px; right: 20px; z-index: 400;
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--bg-panel-alt); border: 1px solid var(--border-lit);
+  color: var(--text-dim); cursor: pointer;
+  font-size: 0.75rem; display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.2s, color 0.2s, border-color 0.2s;
+  pointer-events: none;
+}
+#btn-skip.visible { opacity: 1; pointer-events: all; }
+#btn-skip:hover { color: var(--amber); border-color: var(--amber-dim); }
+
+/* COLLAPSIBLE SECTIONS */
+.collapsible-label {
+  display: flex; justify-content: space-between; align-items: center;
+  cursor: pointer; user-select: none;
+}
+.collapsible-label .collapse-arrow {
+  font-size: 0.5rem; color: var(--text-dim);
+  transition: transform 0.2s; display: inline-block;
+}
+.collapsible-label.collapsed .collapse-arrow { transform: rotate(-90deg); }
+.collapsible-content {
+  overflow: hidden;
+  transition: max-height 0.25s ease;
+  max-height: 1000px;
+}
+.collapsible-content.collapsed { max-height: 0; }
+
+
+#morale-body .standing-row { display: flex; justify-content: space-between; padding: 3px 14px; border-bottom: 1px solid var(--border-dim); }
+#morale-body .standing-row:last-child { border-bottom: none; }
+#morale-body .standing-name { font-family: var(--font-prose); font-size: 0.78rem; color: var(--text-dim); }
+#morale-body .standing-val.pos { color: var(--amber); }
+#morale-body .standing-val.neg { color: var(--blood-bright); }
+#morale-body .standing-val.neu { color: var(--text-dim); }
+
+/* KNOWN LOCATIONS */
+.known-locations-block {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.known-loc-region {
+  font-family: var(--font-ui); font-size: 0.44rem;
+  letter-spacing: 3px; text-transform: uppercase;
+  color: var(--text-dim); padding: 6px 14px 2px;
+  margin-top: 4px;
+}
+.known-loc-item {
+  font-family: var(--font-prose); font-size: 0.78rem;
+  color: var(--text-dim); padding: 3px 14px;
+  cursor: pointer; transition: color 0.15s;
+  border-left: 2px solid transparent;
+}
+.known-loc-item:hover { color: var(--amber); }
+.known-loc-item.current {
+  color: var(--text-bone);
+  border-left-color: var(--amber-dim);
+  cursor: default;
+}
+
+.currency-block {
+  padding: 6px 14px 8px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.currency-row {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 3px 0;
+}
+.currency-name {
+  font-family: var(--font-ui); font-size: 0.48rem;
+  letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase;
+}
+.currency-val {
+  font-family: var(--font-ui); font-size: 0.72rem;
+  color: var(--amber); letter-spacing: 1px;
+}
+
+
+  padding: 12px 14px; display: flex; flex-direction: column; gap: 8px;
+  border-top: 1px solid var(--border); margin-top: auto; flex-shrink: 0;
+}
+.btn-visualize {
+  width: 100%;
+  font-family: var(--font-ui); font-size: 0.58rem;
+  letter-spacing: 3px; text-transform: uppercase;
+  padding: 9px; cursor: pointer;
+  background: rgba(200, 144, 42, 0.06);
+  border: 1px solid var(--amber-dim);
+  color: var(--amber);
+  transition: all 0.2s;
+}
+.btn-visualize:hover {
+  background: rgba(200, 144, 42, 0.15);
+  border-color: var(--amber); color: var(--amber-bright);
+}
+.btn-visualize:disabled {
+  opacity: 0.3; cursor: not-allowed;
+}
+.btn-row { display: flex; gap: 8px; }
+.btn-sm {
+  flex: 1; font-family: var(--font-ui); font-size: 0.55rem;
+  letter-spacing: 2px; text-transform: uppercase;
+  padding: 7px; cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--border-lit);
+  color: var(--text-dim);
+  transition: all 0.2s;
+}
+.btn-sm:hover { border-color: var(--smoke-bright); color: var(--text-main); }
+
+/* ════════════════════════════════════════
+   CENTER — CHRONICLE
+════════════════════════════════════════ */
+.panel-center {
+  display: flex; flex-direction: column; overflow: hidden;
+  border-right: 1px solid var(--border);
+}
+
+.chronicle-label {
+  font-family: var(--font-ui); font-size: 0.5rem;
+  letter-spacing: 4px; text-transform: uppercase;
+  color: var(--text-dim); padding: 10px 28px 8px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.chronicle {
+  flex: 1; overflow-y: auto;
+  padding: 28px 32px 20px;
+  display: flex; flex-direction: column; gap: 24px;
+}
+
+.chronicle-entry {
+  animation: fadeIn 0.4s ease both;
+}
+
+.chronicle-prose {
+  font-family: var(--font-prose);
+  font-size: 1.08rem; line-height: 1.85;
+  color: var(--text-parchment);
+  border-left: 2px solid var(--border-lit);
+  padding-left: 18px;
+}
+
+.chronicle-prose p { margin-bottom: 0.9em; }
+.chronicle-prose p:last-child { margin-bottom: 0; }
+
+.chronicle-prose em { color: var(--text-bone); font-style: italic; }
+.chronicle-prose strong { color: var(--amber-bright); font-weight: 600; }
+
+.chronicle-action {
+  font-family: var(--font-ui); font-size: 0.65rem;
+  color: var(--text-dim); letter-spacing: 1px;
+  padding-left: 20px; margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+/* Tags emitted by narrator — rendered dimly */
+.chronicle-tags {
+  font-family: var(--font-ui); font-size: 0.58rem;
+  color: var(--smoke-bright); letter-spacing: 1px;
+  padding-left: 20px; margin-top: 10px;
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.chronicle-tag {
+  border: 1px solid var(--border-lit);
+  padding: 2px 7px; color: var(--smoke-bright);
+}
+.chronicle-tag.skill { color: var(--amber-dim); border-color: var(--amber-dim); }
+.chronicle-tag.stat  { color: var(--iron);      border-color: var(--iron-dim); }
+.chronicle-tag.item  { color: var(--text-dim);  border-color: var(--border-lit); }
+.chronicle-tag.vow   { color: var(--amber);     border-color: var(--amber-dim); }
+.chronicle-tag.loc   { color: var(--smoke-bright); border-color: var(--border-lit); }
+.chronicle-tag.stand { color: var(--blood-bright); border-color: var(--blood); }
+.chronicle-tag.combat{ color: var(--blood-bright); border-color: var(--blood); }
+.chronicle-tag.hp    { color: var(--blood-bright); border-color: var(--blood); }
+
+/* Inline images */
+.chronicle-image {
+  width: 100%;
+  border: 1px solid var(--border-lit);
+  display: block;
+  animation: fadeIn 0.6s ease both;
+}
+.chronicle-image-wrap {
+  position: relative;
+}
+.chronicle-image-caption {
+  font-family: var(--font-ui); font-size: 0.5rem;
+  color: var(--text-dim); letter-spacing: 2px;
+  text-transform: uppercase; padding: 5px 0 0;
+  text-align: right;
+}
+
+/* Typing */
+.typing-indicator {
+  display: flex; gap: 5px; align-items: center;
+  padding-left: 20px; padding-top: 4px;
+}
+.typing-indicator span {
+  width: 4px; height: 4px;
+  background: var(--amber); border-radius: 50%;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+.typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+.typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes pulse { 0%,80%,100%{opacity:0.15} 40%{opacity:1} }
+
+/* Visualizing indicator */
+.visualizing {
+  font-family: var(--font-ui); font-size: 0.58rem;
+  color: var(--amber-dim); letter-spacing: 2px;
+  padding-left: 20px; padding-top: 6px;
+  animation: flicker 1.5s ease-in-out infinite;
+}
+@keyframes flicker { 0%,100%{opacity:0.4} 50%{opacity:1} }
+
+/* INPUT */
+.input-row {
+  display: flex; border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.action-input {
+  flex: 1; background: transparent; border: none;
+  color: var(--text-parchment); font-family: var(--font-prose);
+  font-size: 1rem; padding: 16px 20px;
+  outline: none; resize: none; height: 56px;
+  caret-color: var(--amber);
+}
+.action-input::placeholder { color: var(--text-dim); font-style: italic; }
+.btn-submit {
+  background: transparent; border: none;
+  border-left: 1px solid var(--border);
+  color: var(--amber); font-family: var(--font-title);
+  font-size: 0.7rem; letter-spacing: 3px;
+  padding: 0 22px; cursor: pointer; transition: 0.2s;
+  text-transform: uppercase;
+}
+.btn-submit:hover { background: var(--amber); color: var(--bg-void); }
+.btn-submit:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* ════════════════════════════════════════
+   RIGHT PANEL
+════════════════════════════════════════ */
+.panel-right {
+  display: flex; flex-direction: column;
+  background: var(--bg-panel); overflow-y: auto;
+}
+
+.stat-block {
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.stat-block-label {
+  font-family: var(--font-ui); font-size: 0.5rem;
+  letter-spacing: 3px; text-transform: uppercase;
+  color: var(--text-dim); margin-bottom: 10px;
+}
+
+.stats-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 8px; margin-bottom: 10px;
+}
+.stat-item { display: flex; flex-direction: column; gap: 2px; }
+.stat-name {
+  font-family: var(--font-ui); font-size: 0.48rem;
+  letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase;
+}
+.stat-value {
+  font-family: var(--font-title); font-size: 1.3rem;
+  color: var(--text-bone); line-height: 1;
+}
+.stat-value.hp { color: var(--blood-bright); }
+.stat-value.str { color: var(--amber); }
+.stat-value.qck { color: var(--iron-bright); }
+.stat-value.wit { color: var(--smoke-bright); }
+
+/* HP bar */
+.hp-bar-wrap { 
+  height: 2px; background: var(--border); margin-top: 6px;
+  grid-column: 1 / -1;
+}
+.hp-bar-fill {
+  height: 100%; background: var(--blood-bright);
+  transition: width 0.6s ease;
+}
+
+/* SKILLS */
+.skill-block {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.skill-category {
+  font-family: var(--font-ui); font-size: 0.47rem;
+  letter-spacing: 3px; text-transform: uppercase;
+  color: var(--text-dim); margin-bottom: 6px; margin-top: 8px;
+}
+.skill-category:first-child { margin-top: 0; }
+
+.skill-row {
+  display: flex; justify-content: space-between;
+  align-items: baseline; padding: 3px 0;
+  border-bottom: 1px solid var(--border-dim);
+}
+.skill-row:last-child { border-bottom: none; }
+.skill-name {
+  font-family: var(--font-prose); font-size: 0.82rem;
+  color: var(--text-main);
+}
+.skill-name.nonzero { color: var(--text-bone); }
+.skill-val {
+  font-family: var(--font-ui); font-size: 0.6rem;
+  color: var(--text-dim); letter-spacing: 1px;
+  min-width: 28px; text-align: right;
+}
+.skill-val.nonzero { color: var(--amber); }
+
+/* mini bar */
+.skill-bar {
+  width: 40px; height: 2px;
+  background: var(--border); margin-left: 6px; flex-shrink: 0;
+}
+.skill-bar-fill {
+  height: 100%;
+  background: var(--amber-dim);
+  transition: width 0.5s ease;
+}
+
+/* STANDING */
+.standing-block {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.standing-row {
+  display: flex; justify-content: space-between;
+  align-items: center; padding: 4px 14px;
+  border-bottom: 1px solid var(--border-dim);
+}
+.standing-row:last-child { border-bottom: none; }
+.standing-name {
+  font-family: var(--font-prose); font-size: 0.82rem;
+  color: var(--text-main);
+}
+.standing-val {
+  font-family: var(--font-ui); font-size: 0.6rem;
+  letter-spacing: 1px;
+}
+.standing-val.pos { color: var(--amber); }
+.standing-val.neg { color: var(--blood-bright); }
+.standing-val.neu { color: var(--text-dim); }
+
+/* LOCATION */
+.location-block {
+  padding: 10px 16px 14px;
+  flex-shrink: 0;
+}
+.location-region {
+  font-family: var(--font-ui); font-size: 0.52rem;
+  letter-spacing: 2px; color: var(--text-dim);
+  text-transform: uppercase; margin-bottom: 2px;
+}
+.location-loc {
+  font-family: var(--font-prose); font-size: 0.95rem;
+  color: var(--text-bone); font-style: italic;
+}
+
+@keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+
+/* hidden file input */
+#file-load { display: none; }
+
+/* ── DEATH SCREEN ── */
+#void-screen {
+  display: none; opacity: 0;
+  position: fixed; inset: 0; z-index: 9000;
+  background: #000;
+  align-items: center; justify-content: center;
+  flex-direction: column;
+  transition: opacity 1.2s ease;
+}
+.void-inner {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 28px;
+  text-align: center;
+}
+.void-title {
+  font-family: var(--font-title);
+  font-size: 2rem; letter-spacing: 10px;
+  color: var(--text-bone); text-transform: uppercase;
+  animation: fadeIn 1.5s ease 0.4s both;
+}
+.void-sub {
+  font-family: var(--font-prose);
+  font-size: 1rem; color: var(--text-dim);
+  font-style: italic; line-height: 1.8;
+  animation: fadeIn 1.5s ease 1s both;
+}
+.void-actions {
+  display: flex; gap: 16px;
+  animation: fadeIn 1.5s ease 1.8s both;
+}
+.void-btn {
+  font-family: var(--font-ui); font-size: 0.6rem;
+  letter-spacing: 3px; text-transform: uppercase;
+  padding: 10px 24px; cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--border-lit);
+  color: var(--text-dim);
+  transition: all 0.2s;
+}
+.void-btn:hover {
+  border-color: var(--amber); color: var(--amber);
+}
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<header>
+  <div class="header-title">Unarmored</div>
+  <div class="header-sub">Silesia · 1325</div>
+  <div class="header-turn" id="turn-counter">TURN 0</div>
+</header>
+
+<div class="layout">
+
+  <!-- ════════════════ LEFT ════════════════ -->
+  <div class="panel-left">
+    <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;min-height:0;">
+
+    <!-- VOWS -->
+    <div class="panel-section" style="flex-shrink:0;">
+      <div class="panel-label collapsible-label" onclick="toggleCollapse(this)">◈ Vows <span class="collapse-arrow">▼</span></div>
+      <div class="collapsible-content">
+        <div class="vows-body" id="vows-body">
+          <div class="vow-empty">No vows sworn.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EQUIPMENT -->
+    <div class="panel-section" style="flex-shrink:0;">
+      <div class="panel-label collapsible-label" onclick="toggleCollapse(this)">◈ Worn <span class="collapse-arrow">▼</span></div>
+      <div class="collapsible-content">
+        <div class="equip-body" id="equip-body">
+          <div class="equip-slot" data-slot="Head">
+            <span class="equip-slot-name">Head</span>
+            <span class="equip-slot-item empty" onclick="openEquipDropdown(event,'Head')">— bare —</span>
+          </div>
+          <div class="equip-slot" data-slot="Neck">
+            <span class="equip-slot-name">Neck</span>
+            <span class="equip-slot-item empty" onclick="openEquipDropdown(event,'Neck')">— bare —</span>
+          </div>
+          <div class="equip-slot" data-slot="Chest">
+            <span class="equip-slot-name">Chest</span>
+            <span class="equip-slot-item empty" onclick="openEquipDropdown(event,'Chest')">— bare —</span>
+          </div>
+          <div class="equip-slot" data-slot="Arms">
+            <span class="equip-slot-name">Arms</span>
+            <span class="equip-slot-item empty" onclick="openEquipDropdown(event,'Arms')">— bare —</span>
+          </div>
+          <div class="equip-slot" data-slot="Hands">
+            <span class="equip-slot-name">Hands</span>
+            <span class="equip-slot-item empty" onclick="openEquipDropdown(event,'Hands')">— bare —</span>
+          </div>
+          <div class="equip-slot" data-slot="Belt">
+            <span class="equip-slot-name">Belt</span>
+            <span class="equip-slot-item empty" onclick="openEquipDropdown(event,'Belt')">— bare —</span>
+          </div>
+          <div class="equip-slot" data-slot="Legs">
+            <span class="equip-slot-name">Legs</span>
+            <span class="equip-slot-item empty" onclick="openEquipDropdown(event,'Legs')">— bare —</span>
+          </div>
+          <div class="equip-slot" data-slot="Feet">
+            <span class="equip-slot-name">Feet</span>
+            <span class="equip-slot-item empty" onclick="openEquipDropdown(event,'Feet')">— bare —</span>
+          </div>
+          <div class="equip-slot" data-slot="Weapon">
+            <span class="equip-slot-name">Weapon</span>
+            <span class="equip-slot-item empty" onclick="openEquipDropdown(event,'Weapon')">— none —</span>
+          </div>
+          <div class="equip-slot" data-slot="Shield">
+            <span class="equip-slot-name">Shield</span>
+            <span class="equip-slot-item empty" onclick="openEquipDropdown(event,'Shield')">— none —</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INVENTORY -->
+    <div class="panel-section" style="flex-shrink:0;">
+      <div class="panel-label collapsible-label" onclick="toggleCollapse(this)">◈ Carried <span class="collapse-arrow">▼</span></div>
+      <div class="collapsible-content">
+        <div class="inv-body" id="inv-body">
+          <div class="inv-item">
+            <span class="inv-name">Tanning Knife</span>
+            <span class="inv-meta"><span class="req">STR 8</span> 2g DMG 3<span class="inv-qty"> ×1</span></span>
+          </div>
+          <div class="inv-item">
+            <span class="inv-name">Father's Tools</span>
+            <span class="inv-meta">6g<span class="inv-qty"> ×1</span></span>
+          </div>
+          <div class="inv-item">
+            <span class="inv-name">Unfinished Leathers</span>
+            <span class="inv-meta">1h<span class="inv-qty"> ×1</span></span>
+          </div>
+          <div class="inv-item">
+            <span class="inv-name">Commission Notice</span>
+            <span class="inv-meta">1h<span class="inv-qty"> ×1</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STANDING -->
+    <div class="panel-section" style="flex-shrink:0;">
+      <div class="panel-label collapsible-label" onclick="toggleCollapse(this)">◈ Standing <span class="collapse-arrow">▼</span></div>
+      <div class="collapsible-content">
+        <div id="standing-body"></div>
+      </div>
+    </div>
+
+    <!-- MORALE -->
+    <div class="panel-section" style="flex-shrink:0;">
+      <div class="panel-label collapsible-label" onclick="toggleCollapse(this)">◈ Hearts <span class="collapse-arrow">▼</span></div>
+      <div class="collapsible-content">
+        <div id="morale-body"></div>
+      </div>
+    </div>
+
+    </div><!-- end scrollable -->
+
+    <!-- CONTROLS -->
+    <div class="panel-controls">
+      <button class="btn-visualize" id="btn-visualize" onclick="visualize()">◈ Visualize</button>
+      <button class="btn-visualize" style="margin-top:0" onclick="openCraftPanel()">◈ Craft</button>
+      <button class="btn-visualize" style="margin-top:0" id="btn-storage" onclick="openStoragePanel()" style="display:none">◈ Storage</button>
+      <div class="btn-row">
+        <button class="btn-sm" onclick="saveGame()">Save</button>
+        <button class="btn-sm" onclick="loadGame()">Load</button>
+      </div>
+      <div class="btn-row">
+        <button class="btn-sm" id="btn-music" onclick="toggleMusic()">Music: Off</button>
+        <button class="btn-sm" id="btn-tts" onclick="toggleTTS()">Voice: Off</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ════════════════ CENTER ════════════════ -->
+  <div class="panel-center">
+    <div class="chronicle-label">◈ The Chronicle</div>
+    <div class="chronicle" id="chronicle"></div>
+    <div class="input-row">
+      <textarea class="action-input" id="action-input" placeholder="Describe your action..." rows="1" maxlength="200"></textarea>
+      <button class="btn-submit" id="btn-submit" onclick="submitAction()">Transmit</button>
+    </div>
+  </div>
+
+  <!-- ════════════════ RIGHT ════════════════ -->
+  <div class="panel-right">
+
+    <!-- STATS -->
+    <div class="stat-block">
+      <div class="stats-grid">
+        <div class="stat-item">
+          <span class="stat-name">Strength</span>
+          <span class="stat-value str" id="stat-str">12</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-name">Quickness</span>
+          <span class="stat-value qck" id="stat-qck">10</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-name">Wit</span>
+          <span class="stat-value wit" id="stat-wit">9</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-name">Weight</span>
+          <span class="stat-value" id="stat-weight">0/44</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-name">Damage</span>
+          <span class="stat-value str" id="stat-damage">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-name">Defense</span>
+          <span class="stat-value wit" id="stat-defense">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-name">HP</span>
+          <span class="stat-value hp" id="stat-hp">100</span>
+        </div>
+        <div class="hp-bar-wrap" style="grid-column:1/-1">
+          <div class="hp-bar-fill" id="hp-bar" style="width:100%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CURRENCY -->
+    <div class="currency-block">
+      <div class="panel-label" style="padding:0 0 5px;border-bottom:none;">◈ Purse</div>
+      <div class="currency-row">
+        <span class="currency-name">Groschen</span>
+        <span class="currency-val" id="currency-groschen">0</span>
+      </div>
+      <div class="currency-row">
+        <span class="currency-name">Haler</span>
+        <span class="currency-val" id="currency-haler">0</span>
+      </div>
+    </div>
+
+    <!-- LOCATION -->
+    <div class="location-block">
+      <div class="stat-block-label">◈ Location</div>
+      <div class="location-region" id="loc-region">Silesia</div>
+      <div class="location-loc" id="loc-loc">Werner's Home</div>
+    </div>
+
+    <!-- KNOWN LOCATIONS -->
+    <div class="known-locations-block">
+      <div class="stat-block-label collapsible-label" onclick="toggleCollapse(this)">◈ Known Locations <span class="collapse-arrow">▼</span></div>
+      <div class="collapsible-content">
+        <div id="known-locations-body">
+          <div class="known-loc-item current">Werner's Home</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SKILLS -->
+    <div class="skill-block">
+      <div class="stat-block-label collapsible-label" onclick="toggleCollapse(this)">◈ Skills <span class="collapse-arrow">▼</span></div>
+      <div class="collapsible-content">
+        <div class="skill-category">Combat</div>
+        <div id="skills-combat"></div>
+
+        <div class="skill-category">Knowledge</div>
+        <div id="skills-knowledge"></div>
+
+        <div class="skill-category">Craft</div>
+        <div id="skills-craft"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<input type="file" id="file-load" accept=".json" onchange="loadFromFile(event)">
+
+<!-- TRACK SKIP -->
+<button id="btn-skip" onclick="skipTrack()" title="Skip track">▶▶</button>
+
+<!-- ── STORAGE PANEL ── -->
+<div id="storage-panel">
+  <div class="storage-modal">
+    <div class="storage-modal-header">
+      <div class="storage-modal-title">◈ Werner's Home — Storage</div>
+      <button class="craft-close" onclick="closeStoragePanel()">✕ Close</button>
+    </div>
+    <div class="storage-cols">
+      <div class="storage-col">
+        <div class="storage-col-label">Carried → Store</div>
+        <div class="storage-items" id="storage-inventory-list"></div>
+      </div>
+      <div class="storage-col">
+        <div class="storage-col-label">Stored → Carry</div>
+        <div class="storage-items" id="storage-stored-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── CRAFTING PANEL ── -->
+<div id="craft-panel">
+  <div class="craft-modal">
+    <div class="craft-modal-header">
+      <div class="craft-modal-title">◈ The Workshop</div>
+      <button class="craft-close" onclick="closeCraftPanel()">✕ Close</button>
+    </div>
+    <div class="craft-tabs">
+      <button class="craft-tab active" onclick="switchCraftTab('leather')">Leather</button>
+      <button class="craft-tab" onclick="switchCraftTab('blacksmith')">Blacksmith</button>
+      <button class="craft-tab" onclick="switchCraftTab('bowcraft')">Bowcraft</button>
+      <button class="craft-tab" onclick="switchCraftTab('alchemy')">Alchemy</button>
+      <button class="craft-tab" onclick="switchCraftTab('forage')">Forage</button>
+    </div>
+    <div class="craft-body" id="craft-body"></div>
+  </div>
+</div>
+
+<!-- ── AUDIO ── -->
+<audio id="amb-1" src="ambient1.mp3" loop preload="auto"></audio>
+<audio id="amb-2" src="ambient2.mp3" loop preload="auto"></audio>
+<audio id="amb-3" src="ambient3.mp3" loop preload="auto"></audio>
+<audio id="amb-4" src="ambient4.mp3" loop preload="auto"></audio>
+<audio id="btl-1" src="battle1.mp3"  loop preload="auto"></audio>
+<audio id="btl-2" src="battle2.mp3"  loop preload="auto"></audio>
+<audio id="btl-3" src="battle3.mp3"  loop preload="auto"></audio>
+<audio id="btl-4" src="battle4.mp3"  loop preload="auto"></audio>
+
+<!-- ── DEATH SCREEN ── -->
+<div id="void-screen">
+  <div class="void-inner">
+    <div class="void-title">The Chronicle Ends</div>
+    <div class="void-sub">Werner has fallen. The debt dies with him.<br>Silesia does not pause. The duchy does not pause.</div>
+    <div class="void-actions">
+      <button class="void-btn" onclick="restartGame()">Begin Again</button>
+      <button class="void-btn" onclick="loadGame()">Load Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════════════════════════
+
+const SKILL_CATEGORIES = {
+  combat:    ['Swordsmanship','Mace Fighting','Fencing','Wrestling','Archery','Parrying'],
+  knowledge: ['Reading','Healing','Herbalism','Tracking','Riding','Stealth','Persuasion'],
+  craft:     ['Alchemy','Blacksmithy','Bowcraft','Leathercraft','Lumberjacking','Mining','Skinning'],
+};
+
+let state = {
+  turn: 0,
+  hp: 100, hpMax: 100,
+  str: 11, qck: 10, wit: 10,
+  damage: 0,
+  defense: 0,
+  weight: 0,
+  groschen: 0,
+  haler: 0,
+  skills: {
+    'Swordsmanship':0,'Mace Fighting':0,'Fencing':0,'Wrestling':4,
+    'Archery':0,'Parrying':0,'Riding':0,
+    'Reading':8,'Healing':4,'Alchemy':0,'Herbalism':0,'Tracking':12,
+    'Stealth':0,'Persuasion':8,
+    'Blacksmithy':0,'Bowcraft':12,'Cooking':8,'Fishing':0,
+    'Leathercraft':28,'Skinning':12,'Mining':0,'Lumberjacking':0,
+  },
+  equipped: {
+    Head: null, Neck: null, Chest: null, Arms: null, Hands: null,
+    Belt: null, Legs: null, Feet: null, Weapon: null, Shield: null,
+  },
+  inventory: [
+    { name: "Tanning Knife",      type: "Weapon",   reqStr: 8,    damage: 3, defense: 0, value: "2g",  qty: 1, weight: 1 },
+    { name: "Father's Tools",     type: "Tool",     reqStr: null, damage: 0, defense: 0, value: "6g",  qty: 1, weight: 4 },
+    { name: "Unfinished Leathers",type: "Misc",     reqStr: null, damage: 0, defense: 0, value: "1h",  qty: 1, weight: 3 },
+    { name: "Cured Leather",      type: "Misc",     reqStr: null, damage: 0, defense: 0, value: "1g",  qty: 2, weight: 2 },
+    { name: "Commission Notice",  type: "Document", reqStr: null, damage: 0, defense: 0, value: "1h",  qty: 1, weight: 0 },
+  ],
+  vows: [
+    { name: "Dietmar's Commission", obj: "Finish and deliver the riding leathers to Lord Dietmar's steward", pay: "8 Groschen, debt cleared" }
+  ],
+  active_vow: "",
+  standing: {
+    'Hartburg': 2,
+    'Dietmar': -1,
+    'Breslau': 0,
+    "Tanner's Guild": 0,
+    'The Church': 0,
+    'The Road': 0,
+  },
+  morale: {
+    'Oswin': 0,
+    'Ilse': 0,
+    'Greta': 0,
+    'Konrad': 0,
+    'Dietrich': 0,
+    'Vogel': 0,
+  },
+  region: 'Silesia',
+  loc: "Werner's Home",
+  storage: [],
+  knownLocations: [
+    { region: 'Hartburg', loc: "Werner's Home" },
+    { region: 'Hartburg', loc: 'The Grey Goose' },
+    { region: 'Hartburg', loc: 'Hartburg Village' },
+    { region: 'Hartburg', loc: 'Hartburg Smithy' },
+    { region: 'Hartburg', loc: 'Hartburg Stables' },
+    { region: 'Hartburg', loc: "Oswin's Hut" },
+    { region: 'Hartburg', loc: "Ilse's Home" },
+    { region: 'Silesia',  loc: "Dietmar's Estate" },
+    { region: 'Silesia',  loc: 'Hartburg Forest' },
+    { region: 'Silesia',  loc: 'The Road to Breslau' },
+    { region: 'Breslau',  loc: 'Breslau Gates' },
+    { region: 'Breslau',  loc: 'Breslau Market' },
+    { region: 'Breslau',  loc: 'Breslau Guild Hall' },
+  ],
+  inCombat: false,
+  skillPoints: 25,
+};
+
+let conversationLog = [];
+let archiveSummaries = [];   // up to 4 summaries, oldest first
+let isThinking = false;
+
+const ACTIVE_WINDOW   = 12;  // messages sent raw each turn
+const ARCHIVE_EVERY   = 12;  // summarize after this many messages
+const MAX_SUMMARIES   = 4;   // rolling window of summaries
+
+// ════════════════════════════════════════════════════════════════════════
+// SYSTEM PROMPT
+// ════════════════════════════════════════════════════════════════════════
+
+const SYSTEM_PROMPT = `# UNARMORED — Silesia, 1325
+
+## ROLE
+You are the Chronicler of Unarmored — a grounded medieval RPG. You narrate Werner's story in third person, past tense, prose only. You never speak as Werner, never give options, never break character.
+
+- Third person only: "Werner does." Never "you do."
+- Werner's speech in double quotes: "Like this."
+- No inner thoughts. Describe actions and observations only.
+- Filter everything through Werner's actual skill values. Never announce the number.
+- Be specific, tactile, unglamorous. Leather, mud, debt, iron.
+
+**Output 75 words maximum.**
+
+---
+
+## WERNER
+Son of a tanner, Hartburg village, Silesia. Father died in April owing guild dues and a commission debt to Lord Dietmar's steward — riding leathers, cut but unassembled. Werner inherited the tools, the hide, and the obligation. He can read, which is unusual. He knows leather, which is useful. He knows nothing of fighting, which is dangerous.
+
+---
+
+## SKILLS — READ BEFORE EVERY RESPONSE
+The CURRENT STATE shows Werner's exact skill values. Filter prose through them silently.
+
+- **Leathercraft 0-13:** Crude work, visible errors, wasted material.
+- **Leathercraft 14-29:** Competent journeyman. Clean cuts, serviceable seams.
+- **Leathercraft 30-59:** Fitted, articulated, professional.
+- **Leathercraft 60+:** Armor-grade. Waxed, sealed, masterwork possible.
+- **Skinning 0-15:** Ragged cuts, torn hides, wastage. Emit +1 Raw Hide.
+- **Skinning 16-35:** Usable pelts. Emit +1-2 Raw Hide.
+- **Skinning 36+:** Full yield, good cuts. Emit +2-3 Raw Hide.
+- **Reading 0-9:** Documents are shapes, wax, texture. Cannot read.
+- **Reading 10-29:** Slow, finger-tracing. Simple words only.
+- **Reading 30-59:** Reads with ease, notices details.
+- **Reading 60+:** Latin, forgeries, legal language.
+- **Swordsmanship 0:** Swings wide, unguarded, exhausting. No technique.
+- **Swordsmanship 20+:** Finds the geometry. Basic guards.
+- **Swordsmanship 50+:** German fencing terms appear in narration.
+- **Herbalism 0-9:** Forest is trees. No plant knowledge.
+- **Herbalism 10+:** Names what grows at the roadside.
+- **Tracking 0-9:** Notices nothing useful. A broken branch is just a broken branch.
+- **Tracking 10-24:** Obvious signs only — fresh footprints, trampled grass, blood on leaves.
+- **Tracking 25-49:** Reads age and direction of tracks, estimates numbers, identifies animal vs human.
+- **Tracking 50+:** Reads the ground like text. Weather, weight, gait, intent. Follows cold trails.
+
+Skill gains: emit tag only on genuine attempt. Max +2 per encounter. Most earn +1.
+
+---
+
+## COMBAT
+Werner's stats determine outcomes — not player intent. Strength = damage weight. Quickness = who acts first. Describe the wound specifically before emitting HP loss. Emit [Combat: Start/End] when violence begins or resolves.
+
+A vague action earns a precise punishment. "I attack him" is not a plan. The narrator responds to what Werner actually does with his body, not what he intends.
+
+German guards (only when skill permits): Vom Tag, Pflug, Ochs, Alber, Zornhau, Mordschlag.
+
+---
+
+## STAT GROWTH
+Stats grow through sustained physical reality — not single moments.
+
+**Strength** grows through: hauling heavy loads over distance, sustained labor (tanning, smithing, woodcutting), combat. If Werner has been carrying ore, timber, or heavy equipment across multiple turns, emit [Strength: +1]. Heavy physical work sustained over compressed time always earns it.
+
+**Quickness** grows through: stealth, speed work, repeated precise movements, combat footwork.
+
+**Wit** grows through: reading, alchemy, healing, careful observation, solving problems.
+
+**Wit determines skill gain rate.** A high-Wit Werner learns from fewer attempts. At Wit 15+, exceptional attempts may earn +2. At Wit 8 or below, even good attempts sometimes earn nothing — the body remembers before the mind does.
+
+---
+
+## TIME COMPRESSION
+The narrator may compress time when it serves the story. Two days of tanning work becomes a paragraph of accumulated sensation — the smell of the vats, the ache in the wrists, the slow satisfaction of a hide coming right. Emit skill and stat tags that reflect the full compressed period, not just one turn's worth. Then resume scene-by-scene.
+
+---
+
+## DOCUMENTS
+Documents are readable only at Reading threshold. Below Reading 10: shapes, wax, parchment texture — Werner cannot read it. Reading 10-29: slow, laborious, partial. Reading 30+: full comprehension. Never describe document contents to a Werner who cannot read them.
+
+**Reading skill gains from documents:** Only on first read. Re-reading the same document grants no further gain. The Commission Notice, once read, is just paper.
+
+**Commission Notice:** Remove from inventory when the Dietmar's Commission vow closes — emit [Item: Commission Notice | Type: Document | Value: 1h | Quantity: -1]. Werner has no use for it after Hesso settles the debt.
+
+---
+
+**Skinning** — requires Tanning Knife in inventory. Emit [Item: Raw Hide | Type: Misc | Value: 1g | Quantity: +N]
+
+**Lumberjacking** — requires Axe in inventory. Emit [Item: Wood | Type: Misc | Value: 1h | Quantity: +N]. Seasoned Wood only from already-dried timber — never from fresh cuts in one session.
+
+**Mining** — requires Pickaxe in inventory. Emit [Item: Iron Ore | Type: Misc | Value: 1g | Quantity: +N] or [Item: Silver Ore | Type: Misc | Value: 2g | Quantity: +N].
+
+**Foraging** — no tool required. Emit valid herb names only (see Item Names).
+
+**Crafting** — the UI handles crafting. Do NOT emit item tags for crafted outputs. Do NOT remove ingredients. Do NOT grant skill gains for crafting. Acknowledge the finished item in prose only.
+
+**Equipment** — Werner can only use weapons and armor that are shown in EQUIPPED. Items carried in inventory but not equipped provide no combat benefit and cannot be used in a scene. A bow in the pack is not a bow in the hand.
+
+**Assembly** — when player narrates assembling multi-part items (spear tip + shaft, mace head + handle), emit the assembled weapon tag and remove components.
+
+---
+
+## ITEM NAMES — EXACT STRINGS ONLY
+The crafting system matches by exact string. Wrong name = useless ingredient.
+
+Valid ingredient names (copy exactly):
+Raw Hide, Cured Leather, Hardened Leather, Unfinished Leathers, Leather Strap, Iron Ore, Silver Ore, Iron Ingot, Steel Ingot, Knife Blade, Knife Sheath, Axe Head, Iron Arrowheads, Wood, Seasoned Wood, Arrow Shaft, Feather, Yarrow, Aromatic Herbs, Willow Bark, Valerian Root, Pine Resin, Honey, Beeswax, Tallow, Vinegar, Wine, Linen Cloth, Charcoal
+
+---
+
+## ⚖️ LAW OF HEARTS
+
+The quiet ledger of the living.
+
+Every bond leaves a mark. The people of Hartburg are not variables — they are constellations of trust and fracture. Your duty is to witness their drift. Never to measure it aloud, but to remember it in silence.
+
+When hearts move:
++1 → recognition, small kindness, work well done, a debt repaid
++2 → sacrifice, protection, extraordinary trust, the kind of act a person does not forget
+−1 → dismissal, neglect, coldness, a promise not kept
+−2 → betrayal, endangerment, cruelty, the kind of act that closes a door
+
+Never speak numbers. Show the shift through behavior — the way Greta refills Werner's cup without being asked, or the way Oswin does not meet his eyes. Then seal it in a tag.
+
+[Morale: Name | Delta: +/-N]
+
+Only those who share the moment may change. Do not move the absent. Do not grant feeling to ghosts.
+
+The measure of a man is care given when no one demands it. Every mark of morale is an echo of how well Werner remembers to be human.
+
+---
+
+## ⚖️ LAW OF ECHOES
+
+Reputation is not announced. It accumulates.
+
+The factions of Silesia watch Werner through intermediaries — the reeve who reports to Dietmar, the guild brother who sees Werner working without a charter, the priest who notices what Werner does with his groschen. Standing shifts slowly and consequentially.
+
+When echoes move:
++1 → trade completed honestly, alliance honored, mercy granted, debt paid
++2 → extraordinary service, public act of loyalty, saving something the faction values
+−1 → vow ignored, trust shaken, known transgression
+−2 → betrayal, violence against the faction's interests, public disgrace
+
+Each mark must carry real consequence. Reputation is sacred. Emit sparingly.
+
+[Standing: Faction | Delta: +/-N]
+
+Valid factions: Hartburg, Dietmar, Breslau, Tanner's Guild, The Church, The Road
+
+The Road is the reputation that travels between places — through merchants, travelers, caravan masters, and bards. Emmerich is a node in this network. What he says about Werner at the next inn is Werner's Road standing moving. High Road standing opens doors before Werner arrives. Low Road standing closes them.
+
+Even a whisper can become doctrine. A man who burns a building in Hartburg at midnight will find the village remembers it at noon.
+
+---
+
+Wolves inhabit Hartburg Forest, particularly deeper in. They are not bandits — they do not assess Werner and decide. They respond to threat and opportunity.
+
+**Behavior:**
+- A lone wolf may circle, test, then withdraw if Werner holds his ground with a weapon drawn. It is not brave, only hungry.
+- A pack of two or more does not withdraw. They coordinate. One draws attention while others flank.
+- Running triggers pursuit. Quickness determines whether Werner can reach a tree, a clearing, or distance before they close.
+- A drawn bow gives Werner one shot before they reach him. At Archery 43 he will likely hit. Whether one arrow stops a wolf depends on placement.
+
+**Pack size:** Determined by how deep Werner is in the forest. Alone near the treeline: likely one. Deep in: potentially three or more.
+
+**Combat:** Wolves bite and drag. A bite to the arm affects bow accuracy. A bite to the leg affects movement. Describe the specific wound before emitting HP loss. Emit [Combat: Start] / [Combat: End].
+
+**Skinning wolves:** Emit [Item: Raw Hide | Type: Misc | Value: 1g | Quantity: +N]. Wolf hides are tougher than deer but the carcass is often damaged from the struggle — yield is typically one less than an equivalent Skinning roll on deer. A wolf killed cleanly with an arrow yields better than one killed in close combat.
+
+**Torches:** A lit torch held in the off-hand (Shield slot) deters wolves significantly. A lone wolf will not approach. A pack will circle at distance and may eventually withdraw. However, a wolf killed while Werner carries a torch yields damaged hide — the heat and struggle ruin the pelt. Werner must choose between safety and yield.
+
+---
+
+Bandits on the roads of Silesia are discharged soldiers, failed peasants, and desperate men. Every encounter is one of two types — the narrator determines which based on context, without announcing it.
+
+**Type 1 — Desperate**
+Men who were something else last month. They'd rather intimidate than bleed. They assess Werner before acting — his equipment, his bearing, whether he looks like someone who has fought before. A man with a bow on his back and leather on his chest reads differently than a man with a tanning knife and soft hands. If Werner holds his ground, speaks carefully, or offers something of value, they may back down or negotiate. They are not brave. They are hungry.
+
+**Type 2 — Organized**
+A group with a leader, a routine, and nothing particular to lose. They do not negotiate. They have done this before and they know how it ends. Werner's only options are to fight, flee, or surrender everything. Running is viable at high Quickness. Fighting is viable if Werner is armed and not outnumbered badly. Surrender costs him what he's carrying.
+
+**Both types:**
+- Assess Werner's equipment from EQUIPPED. A man in armor with a weapon drawn is treated differently than an unarmed man in linen.
+- Strength and Quickness determine combat outcomes. A tanner with Swordsmanship 0 does not suddenly fight well because he is desperate.
+- Emit [Combat: Start] when violence begins. If Werner flees successfully, emit [Combat: End] without resolution.
+- Death is possible. The chronicle does not soften it.
+
+---
+Every tag on its own line. Silent in prose. Emit only what changed.
+
+\`\`\`
+[Strength: +N]
+[Quickness: +N]
+[Wit: +N]
+[SkillName: +N]
+[HP: +/-N]
+[Groschen: +/-N]
+[Haler: +/-N]
+[Item: Name | Type: X | ReqStr: N | Damage/Defense: N | Value: Ng | Quantity: +/-N]
+[Region: X | Loc: Y]
+[Combat: Start/End]
+[Vow: Start/End | Name: X | Obj: Task (Start only) | Pay: Payment]
+[Standing: Faction | Delta: +/-N]
+[Morale: Name | Delta: +/-N]
+\`\`\`
+
+**Item Types:** Weapon, ArmorHead, ArmorNeck, ArmorChest, ArmorArms, ArmorHands, ArmorBelt, ArmorLegs, ArmorFeet, Shield, Tool, Food, Document, Misc
+
+**Currency:** 12 Haler = 1 Groschen. Ale: 2-3 Haler. Bread: 1-2 Haler. Inn: 6-8 Haler. Day labor: 6-8 Haler. Knife: 2g. Sword: 8-18g.
+
+**Vow payment:** Pay field is display only. Emit [Groschen: +N] separately to actually pay Werner.
+
+**NEVER** emit negative quantity for items not in Werner's inventory. Check INVENTORY in CURRENT STATE first.
+
+---
+
+## TAG EXAMPLES — CORRECT vs INCORRECT
+
+**Skinning an animal:**
+✓ CORRECT — tag on its own line, exact item name:
+Werner works the knife along the belly. The hide comes away in one piece, mostly clean.
+[Item: Raw Hide | Type: Misc | Value: 1g | Quantity: +2]
+[Skinning: +1]
+
+✗ INCORRECT — wrong name, tags inline:
+Werner skins the boar. [Item: Raw Boar Hide | Type: Misc | Value: 1g | Quantity: +2] [Skinning: +1]
+
+---
+
+**Making change:**
+✓ CORRECT — separate lines, correct math:
+The merchant counts out the change.
+[Groschen: -1]
+[Haler: +9]
+
+✗ INCORRECT — one line, wrong conversion:
+[Groschen: -1] [Haler: +15]
+
+---
+
+**Completing a vow:**
+✓ CORRECT — pay field display only, currency separate:
+Hesso draws a line through the ledger. The debt is satisfied.
+[Vow: End | Name: Dietmar's Commission | Pay: 8 Groschen]
+[Groschen: +8]
+
+✗ INCORRECT — pay field used for currency (double-pays):
+[Vow: End | Name: Dietmar's Commission | Pay: 8 Groschen]
+(no separate Groschen tag — money never arrives)
+
+---
+
+**Combat wound:**
+✓ CORRECT — wound described before HP tag:
+The blade catches Werner across the forearm. A shallow cut, but it bleeds freely.
+[HP: -8]
+[Combat: Start]
+
+✗ INCORRECT — HP tag without description:
+Werner gets hit. [HP: -8]
+
+---
+
+**Delivering/selling an item (removal):**
+✓ CORRECT — item exists in inventory, negative quantity:
+Hesso takes the leathers and folds them over the mounting block.
+[Item: Riding Leathers | Type: ArmorChest | ReqStr: — | Defense: 3 | Value: 8g | Quantity: -1]
+
+✗ INCORRECT — removing item not in inventory, or forgetting to remove:
+(Werner hands over the leathers but no removal tag is emitted — leathers stay in inventory forever)
+
+---
+
+**Receiving an item:**
+✓ CORRECT — correct type, positive quantity:
+The merchant hands over a wrapped knife.
+[Item: Iron Knife | Type: Weapon | ReqStr: 8 | Damage: 4 | Value: 4g | Quantity: +1]
+
+✗ INCORRECT — removing item not in inventory:
+[Item: Iron Knife | Type: Weapon | ReqStr: 8 | Damage: 4 | Value: 4g | Quantity: -1]
+(Werner never had a knife — check INVENTORY first)
+
+---
+
+**Armor item:**
+✓ CORRECT — slot-specific type:
+[Item: Leather Cap | Type: ArmorHead | ReqStr: — | Defense: 1 | Value: 2g | Quantity: +1]
+
+✗ INCORRECT — generic Armor type:
+[Item: Leather Cap | Type: Armor | ReqStr: — | Defense: 1 | Value: 2g | Quantity: +1]
+
+---
+
+## THE WORLD
+
+**Silesia, 1325.** The Piast dynasty is fracturing. Minor lords navigate competing duke allegiances. John of Luxembourg quietly acquires territory. Discharged soldiers move the roads. Guild law governs crafts. Language marks allegiance — German settlers and Polish locals share the region uneasily.
+
+**LOCATION TAG RULES:**
+- Use only approved locations. Region and Loc must match exactly.
+- HARTBURG: Werner's Home, The Grey Goose, Hartburg Village, Hartburg Smithy, Hartburg Stables, Oswin's Hut, Ilse's Home
+- SILESIA: Dietmar's Estate, Hartburg Forest, The Road to Breslau
+- BRESLAU: Breslau Gates, Breslau Market, Breslau Guild Hall
+- Correct: [Region: Hartburg | Loc: Hartburg Village]
+- Correct: [Region: Silesia | Loc: Hartburg Forest]
+- Incorrect: [Region: Hartburg | Loc: Hartburg] or [Region: Silesia | Loc: Forest]
+
+ Tannery at the edge. The Grey Goose inn at the center. The priest knows more than he says. A job board stands near the well — notices nailed over older notices, some weathered to illegibility.
+**Hartburg Smithy** — Konrad's forge. Basic blacksmithing. Fee or favor to use.
+**Hartburg Stables** — Horses for hire, farm animals, travelers' mounts. The stableman knows who passes through.
+**Oswin's Hut** — Woodcutter's dwelling at the forest edge. Timber, tools, the forest begins here.
+**Ilse's Home** — Stone-walled, set apart from the village, surrounded by elderberry and drying herbs. Sharp, complex smell. She knows what grows and what it does.
+**Dietmar's Estate** — Two hours east. Steward Hesso. Precise records.
+**Hartburg Forest** — Dense, genuinely dangerous further in. Game, charcoal burners at the edges.
+**The Road to Breslau** — A day's walk. Merchants, soldiers, travelers. Information and danger.
+**Breslau Gates** — The city entrance. Captain Ernst Vogel runs the gate guard. Tolls, questions, assessment. A man with legitimate business moves through. A man who fumbles does not.
+**Breslau Market** — Iron, tools, food, trade goods. Where Werner can buy and sell.
+**Breslau Guild Hall** — The tanners' guild and others. Legal obligations live here.
+
+---
+
+## THE PEOPLE
+
+**EMMERICH** — Bard. Travels court to market town. Knows more than he admits. Collects useful people. He can read fluently — Latin, German, a little Polish. If Werner earns his interest, Emmerich will push his Reading further than Werner could get alone. He also carries information: which lord is in trouble, which road is watched, which merchant needs a skilled tanner. His currency is usefulness. Werner must become useful to him first.
+
+**GRETA** — Tavern keep. Husband three years dead. Extends credit carefully. If Werner clears his debts, builds something real, and stops looking like a man one bad week from ruin — the door is not closed. Not yet open. Practically: she can offer Werner work at the inn — steady haler, access to travelers and merchants, a foothold in the social world of Hartburg that a tannery boy doesn't naturally have. She is the gateway to the village's information network.
+
+**OSWIN** — Woodcutter, family friend. Quiet, reliable, knows the forest. Easy to overlook. He has an axe — a good one, well-maintained. He will lend it, or let Werner work alongside him, unlocking Lumberjacking. He does not offer this immediately. He watches first.
+
+**ILSE** — Midwife, herbalist. Has been watching Werner since birth. Waiting to see if she was right. She has a mortar and pestle and knows what to do with it. If Werner shows genuine interest in plants and healing — not just asking for remedies but wanting to understand — she will teach him and eventually give him the tools. This unlocks Alchemy. She does not give anything to people who aren't paying attention.
+
+**KONRAD** — The Smith. No relation to Werner's father, though the name is common enough. Wide man, leather apron stiff with grease and slag. He works iron for the farms and the estate and does not extend credit. He recognized Werner as the tanner's son immediately and has been watching him since — not with warmth exactly, but with the attention a craftsman gives to someone who might be useful or might be trouble. He will let Werner use the forge for a fee or a favor. He watches his tools.
+
+**ERNST VOGEL** — Captain of the Breslau Gate Guard. Twenty years in city service. He runs the gate with the precision of a man who has seen what happens when you don't. Not corrupt — pragmatic. He knows every face that passes through regularly and notices new ones. Werner arriving with a bow, leather armor, and the smell of the tannery will get a second look. Vogel is not hostile to strangers; he is calibrated to them. He will assess Werner's purpose, his guild status, his weapons, and his manner before deciding how much friction to apply. A man with legitimate business and honest answers moves through quickly. A man who fumbles or lies moves through slowly, if at all. He has no interest in Werner specifically — yet.
+
+**DIETRICH** — Discharged soldier, passing through and not quite leaving. Sizes up everyone from habit, not malice. He will train Werner in swordsmanship if Werner commits — not for free, but potentially for leather work, repairs, something useful. When Dietrich decides Werner has earned it — when the Swordsmanship is real enough to respect — he will give Werner his spare sword. Not sell. Give. It is a judgment, not a transaction.`;
+
+// ════════════════════════════════════════════════════════════════════════
+// CONTEXT BUILDER
+// ════════════════════════════════════════════════════════════════════════
+
+function buildContext() {
+  const skillLines = Object.entries(state.skills)
+    .map(([k, v]) => `${k}: ${v}`).join(' | ');
+
+  const invLines = state.inventory.length
+    ? state.inventory.map(i => {
+        let extra = '';
+        if (i.type === 'Weapon') extra = ` | Damage: ${i.damage ?? 0}`;
+        if (i.type === 'Armor' || i.type === 'Shield') extra = ` | Defense: ${i.defense ?? 0}`;
+        return `${i.name} | ${i.type} | ReqStr: ${i.reqStr ?? '—'}${extra} | ${i.value} | x${i.qty}`;
+      }).join('\n')
+    : 'Empty';
+
+  const equipLines = Object.entries(state.equipped)
+    .map(([slot, item]) => `${slot}: ${item ? item.name : '—'}`)
+    .join(' | ');
+
+  const standingLines = Object.keys(state.standing).length
+    ? Object.entries(state.standing).map(([k, v]) => `${k}: ${v > 0 ? '+' : ''}${v}`).join(' | ')
+    : 'None';
+
+  const moraleLines = Object.keys(state.morale || {}).length
+    ? Object.entries(state.morale).map(([k, v]) => `${k}: ${v > 0 ? '+' : ''}${v}`).join(' | ')
+    : 'None';
+
+  const vowLines = state.vows.length
+    ? state.vows.map(v => `${v.name}: ${v.obj} | Pay: ${v.pay}`).join('\n')
+    : 'None';
+
+  const storageLines = (state.storage || []).length
+    ? state.storage.map(i => `${i.name} | ${i.type} | x${i.qty}`).join('\n')
+    : 'Empty';
+
+  return `### CURRENT STATE ###
+WERNER
+Strength ${state.str} | Quickness ${state.qck} | Wit ${state.wit} | HP ${state.hp}/${state.hpMax}
+Damage ${state.damage} | Defense ${state.defense} | Weight ${state.weight}/${maxWeight()}
+
+PURSE
+Groschen: ${state.groschen} | Haler: ${state.haler}
+
+SKILLS
+${skillLines}
+
+LOCATION
+Region: ${state.region} | Loc: ${state.loc}
+
+EQUIPPED
+${equipLines}
+
+INVENTORY
+${invLines}
+
+HOME STORAGE
+${storageLines}
+
+VOWS
+${vowLines}
+
+STANDING
+${standingLines}
+
+HEARTS
+${moraleLines}
+
+COMBAT: ${state.inCombat ? 'ACTIVE' : 'NONE'}`;
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// TAG PARSER
+// ════════════════════════════════════════════════════════════════════════
+
+function parseTags(text) {
+  const tags = [];
+  // Split by newlines first, then extract individual [...] tokens from each line
+  const rawLines = text.split('\n');
+  const lines = [];
+  for (const raw of rawLines) {
+    const tokens = raw.match(/\[[^\[\]]+\]/g);
+    if (tokens && tokens.length > 1) {
+      // Multiple tags on one line — treat each as its own line
+      lines.push(...tokens);
+    } else {
+      lines.push(raw);
+    }
+  }
+
+  for (const line of lines) {
+    const t = line.trim();
+
+    // Stats
+    let m = t.match(/^\[Strength:\s*([+-]?\d+)\]$/i);
+    if (m) { tags.push({ type: 'stat', key: 'str', delta: parseInt(m[1]), raw: t }); continue; }
+    m = t.match(/^\[Quickness:\s*([+-]?\d+)\]$/i);
+    if (m) { tags.push({ type: 'stat', key: 'qck', delta: parseInt(m[1]), raw: t }); continue; }
+    m = t.match(/^\[Wit:\s*([+-]?\d+)\]$/i);
+    if (m) { tags.push({ type: 'stat', key: 'wit', delta: parseInt(m[1]), raw: t }); continue; }
+
+    // HP
+    m = t.match(/^\[HP:\s*([+-]?\d+)\]$/i);
+    if (m) { tags.push({ type: 'hp', delta: parseInt(m[1]), raw: t }); continue; }
+
+    // Skills
+    const skillNames = Object.keys(state.skills);
+    let matched = false;
+    for (const sk of skillNames) {
+      const re = new RegExp(`^\\[${sk}:\\s*([+-]?\\d+)\\]$`, 'i');
+      m = t.match(re);
+      if (m) { tags.push({ type: 'skill', key: sk, delta: parseInt(m[1]), raw: t }); matched = true; break; }
+    }
+    if (matched) continue;
+
+    // Item — Weapon
+    m = t.match(/^\[Item:\s*(.+?)\s*\|\s*Type:\s*Weapon\s*\|\s*ReqStr:\s*(.+?)\s*\|\s*Damage:\s*(\d+)\s*\|\s*Value:\s*(.+?)\s*\|\s*Quantity:\s*([+-]?\d+)\]$/i);
+    if (m) { tags.push({ type: 'item', name: m[1], itype: 'Weapon', reqStr: m[2], damage: parseInt(m[3]), defense: 0, value: m[4], qty: parseInt(m[5]), weight: 3, raw: t }); continue; }
+
+    // Item — Armor/Shield with slot-specific type
+    m = t.match(/^\[Item:\s*(.+?)\s*\|\s*Type:\s*(Armor\w*|Shield)\s*\|\s*ReqStr:\s*(.+?)\s*\|\s*Defense:\s*(\d+)\s*\|\s*Value:\s*(.+?)\s*\|\s*Quantity:\s*([+-]?\d+)\]$/i);
+    if (m) { tags.push({ type: 'item', name: m[1], itype: m[2], reqStr: m[3], damage: 0, defense: parseInt(m[4]), value: m[5], qty: parseInt(m[6]), weight: 3, raw: t }); continue; }
+
+    // Item — generic
+    m = t.match(/^\[Item:\s*(.+?)\s*\|\s*Type:\s*(.+?)\s*\|\s*(?:ReqStr:\s*(.+?)\s*\|\s*)?Value:\s*(.+?)\s*\|\s*Quantity:\s*([+-]?\d+)\]$/i);
+    if (m) {
+      const itype = m[2];
+      const defaultWeight = (itype === 'Food' || itype === 'Misc' || itype === 'Document') ? 0 : 1;
+      tags.push({ type: 'item', name: m[1], itype, reqStr: m[3] ?? null, damage: 0, defense: 0, value: m[4], qty: parseInt(m[5]), weight: defaultWeight, raw: t });
+      continue;
+    }
+
+    // Currency
+    m = t.match(/^\[Groschen:\s*([+-]?\d+)\]$/i);
+    if (m) { tags.push({ type: 'currency', key: 'groschen', delta: parseInt(m[1]), raw: t }); continue; }
+    m = t.match(/^\[Haler:\s*([+-]?\d+)\]$/i);
+    if (m) { tags.push({ type: 'currency', key: 'haler', delta: parseInt(m[1]), raw: t }); continue; }
+
+    // Location
+    m = t.match(/^\[Region:\s*(.+?)\s*\|\s*Loc:\s*(.+?)\]$/i);
+    if (m) { tags.push({ type: 'loc', region: m[1], loc: m[2], raw: t }); continue; }
+
+    // Standing
+    m = t.match(/^\[Standing:\s*(.+?)\s*\|\s*Delta:\s*([+-]?\d+)\]$/i);
+    if (!m) m = t.match(/^\[Standing:\s*(.+?)\s*\|\s*([+-]?\d+)\]$/i); // legacy
+    if (m) { tags.push({ type: 'stand', faction: m[1], delta: parseInt(m[2]), raw: t }); continue; }
+
+    // Morale
+    m = t.match(/^\[Morale:\s*(.+?)\s*\|\s*Delta:\s*([+-]?\d+)\]$/i);
+    if (!m) m = t.match(/^\[Morale:\s*(.+?)\s*\|\s*([+-]?\d+)\]$/i); // legacy
+    if (m) { tags.push({ type: 'morale', name: m[1], delta: parseInt(m[2]), raw: t }); continue; }
+
+    // Combat
+    m = t.match(/^\[Combat:\s*(Start|End)\]$/i);
+    if (m) { tags.push({ type: 'combat', state: m[1].toLowerCase(), raw: t }); continue; }
+
+    // Vow — combined format
+    m = t.match(/^\[Vow:\s*(Start)\s*\|\s*Name:\s*(.+?)\s*\|\s*Obj:\s*(.+?)\s*\|\s*Pay:\s*(.+?)\]$/i);
+    if (m) { tags.push({ type: 'vow_start', name: m[2], obj: m[3], pay: m[4], raw: t }); continue; }
+    m = t.match(/^\[Vow:\s*(End)\s*\|\s*Name:\s*(.+?)\s*\|\s*Pay:\s*(.+?)\]$/i);
+    if (m) { tags.push({ type: 'vow_end', name: m[2], pay: m[3], raw: t }); continue; }
+    // Legacy fallback
+    m = t.match(/^\[Vow_Start:\s*(.+?)\s*\|\s*Obj:\s*(.+?)\s*\|\s*Pay:\s*(.+?)\]$/i);
+    if (m) { tags.push({ type: 'vow_start', name: m[1], obj: m[2], pay: m[3], raw: t }); continue; }
+    m = t.match(/^\[Vow_End:\s*(.+?)\s*\|\s*Pay:\s*(.+?)\]$/i);
+    if (m) { tags.push({ type: 'vow_end', name: m[1], pay: m[2], raw: t }); continue; }
+    m = t.match(/^\[Vow_End:\s*(.+?)\]$/i);
+    if (m) { tags.push({ type: 'vow_end', name: m[1], pay: null, raw: t }); continue; }
+  }
+
+  return tags;
+}
+
+function applyTags(tags) {
+  for (const tag of tags) {
+    switch (tag.type) {
+      case 'stat':
+        state[tag.key] = Math.max(0, state[tag.key] + tag.delta);
+        break;
+      case 'hp':
+        state.hp = Math.max(0, Math.min(state.hpMax, state.hp + tag.delta));
+        if (state.hp <= 0) setTimeout(triggerDeath, 800);
+        break;
+      case 'skill':
+        if (state.skills[tag.key] !== undefined)
+          state.skills[tag.key] = Math.max(0, Math.min(100, state.skills[tag.key] + tag.delta));
+        break;
+      case 'item': {
+        const existing = state.inventory.find(i => i.name.toLowerCase() === tag.name.toLowerCase());
+        if (tag.qty < 0) {
+          // Only remove if item exists and has sufficient quantity
+          if (!existing) { console.warn(`Cannot remove ${tag.name} — not in inventory`); break; }
+          if (existing.qty + tag.qty < 0) { console.warn(`Cannot remove ${Math.abs(tag.qty)}x ${tag.name} — only ${existing.qty} in inventory`); break; }
+        }
+        if (existing) {
+          // Check weight before adding positive qty
+          if (tag.qty > 0) {
+            const addedWeight = (existing.weight ?? 1) * tag.qty;
+            if (state.weight + addedWeight > maxWeight()) {
+              console.warn(`Cannot pick up ${tag.name} — over max weight`);
+              break;
+            }
+          }
+          existing.qty += tag.qty;
+          if (existing.qty <= 0) {
+            for (const slot of Object.keys(state.equipped)) {
+              if (state.equipped[slot]?.name.toLowerCase() === tag.name.toLowerCase()) {
+                state.equipped[slot] = null;
+              }
+            }
+            state.inventory = state.inventory.filter(i => i !== existing);
+          }
+        } else if (tag.qty > 0) {
+          const itemWeight = tag.weight ?? 1;
+          const addedWeight = itemWeight * tag.qty;
+          if (state.weight + addedWeight > maxWeight()) {
+            console.warn(`Cannot pick up ${tag.name} — over max weight`);
+            break;
+          }
+          state.inventory.push({
+            name: tag.name, type: tag.itype,
+            reqStr: tag.reqStr === '—' || tag.reqStr == null ? null : parseInt(tag.reqStr),
+            damage: tag.damage ?? 0,
+            defense: tag.defense ?? 0,
+            value: tag.value, qty: tag.qty,
+            weight: itemWeight
+          });
+        }
+        recalcDerived();
+        break;
+      }
+      case 'currency':
+        state[tag.key] = Math.max(0, (state[tag.key] || 0) + tag.delta);
+        // Auto-convert: 12 haler = 1 groschen
+        if (state.haler >= 12) {
+          const conv = Math.floor(state.haler / 12);
+          state.groschen += conv;
+          state.haler -= conv * 12;
+        }
+        break;
+      case 'loc':
+        state.region = tag.region;
+        state.loc = tag.loc;
+        break;
+      case 'stand':
+        if (state.standing[tag.faction] !== undefined)
+          state.standing[tag.faction] += tag.delta;
+        else
+          state.standing[tag.faction] = tag.delta;
+        state.standing[tag.faction] = Math.max(-10, Math.min(10, state.standing[tag.faction]));
+        break;
+      case 'morale':
+        if (!state.morale) state.morale = {};
+        if (state.morale[tag.name] !== undefined)
+          state.morale[tag.name] += tag.delta;
+        else
+          state.morale[tag.name] = tag.delta;
+        state.morale[tag.name] = Math.max(-10, Math.min(10, state.morale[tag.name]));
+        break;
+      case 'combat':
+        state.inCombat = tag.state === 'start';
+        setCombatMusic(state.inCombat);
+        break;
+      case 'vow_start':
+        if (!state.vows.find(v => v.name === tag.name))
+          state.vows.push({ name: tag.name, obj: tag.obj, pay: tag.pay });
+        break;
+      case 'vow_end': {
+        state.vows = state.vows.filter(v => v.name !== tag.name);
+        break;
+      }
+    }
+  }
+}
+
+function stripTags(text) {
+  return text.split('\n')
+    .filter(line => !line.trim().match(/^\[.+\]$/))
+    .join('\n').trim();
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// CHRONICLE RENDERING
+// ════════════════════════════════════════════════════════════════════════
+
+function renderEntry(prose, action, tags) {
+  const entry = document.createElement('div');
+  entry.className = 'chronicle-entry';
+
+  if (action) {
+    const a = document.createElement('div');
+    a.className = 'chronicle-action';
+    a.textContent = '› ' + action;
+    entry.appendChild(a);
+  }
+
+  const p = document.createElement('div');
+  p.className = 'chronicle-prose';
+  p.innerHTML = marked.parse(prose);
+  entry.appendChild(p);
+
+  if (tags.length > 0) {
+    const tRow = document.createElement('div');
+    tRow.className = 'chronicle-tags';
+    const VISIBLE_TYPES = new Set(['skill', 'stat', 'str', 'qck', 'wit', 'hp']);
+    for (const tag of tags) {
+      if (!VISIBLE_TYPES.has(tag.type)) continue;
+      const span = document.createElement('span');
+      span.className = 'chronicle-tag ' + tag.type;
+      span.textContent = tag.raw.replace(/^\[|\]$/g, '');
+      tRow.appendChild(span);
+    }
+    if (tRow.hasChildNodes()) entry.appendChild(tRow);
+  }
+
+  document.getElementById('chronicle').appendChild(entry);
+  scrollChronicle();
+  speakChronicle(prose);
+}
+
+function renderImage(b64) {
+  const chronicle = document.getElementById('chronicle');
+  const wrap = document.createElement('div');
+  wrap.className = 'chronicle-image-wrap chronicle-entry';
+  const img = document.createElement('img');
+  img.className = 'chronicle-image';
+  img.src = 'data:image/png;base64,' + b64;
+  const cap = document.createElement('div');
+  cap.className = 'chronicle-image-caption';
+  cap.textContent = 'Bohemia · ' + state.region;
+  wrap.appendChild(img);
+  wrap.appendChild(cap);
+  chronicle.appendChild(wrap);
+  scrollChronicle();
+}
+
+function scrollChronicle() {
+  const c = document.getElementById('chronicle');
+  c.scrollTop = c.scrollHeight;
+}
+
+function showTyping() {
+  const div = document.createElement('div');
+  div.className = 'chronicle-entry';
+  div.id = 'typing-entry';
+  div.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
+  document.getElementById('chronicle').appendChild(div);
+  scrollChronicle();
+}
+
+function hideTyping() {
+  const t = document.getElementById('typing-entry');
+  if (t) t.remove();
+}
+
+function showVisualizing() {
+  const div = document.createElement('div');
+  div.id = 'viz-entry';
+  div.className = 'visualizing';
+  div.textContent = 'Painter summoned...';
+  document.getElementById('chronicle').appendChild(div);
+  scrollChronicle();
+}
+
+function hideVisualizing() {
+  const v = document.getElementById('viz-entry');
+  if (v) v.remove();
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// UI UPDATES
+// ════════════════════════════════════════════════════════════════════════
+
+// ════════════════════════════════════════════════════════════════════════
+// CRAFTING SYSTEM
+// ════════════════════════════════════════════════════════════════════════
+
+// Forge locations — blacksmithing requires being at one
+const FORGE_LOCATIONS = ['Village Forge', 'Smithy', 'Castle Forge', 'Hartburg Forge'];
+const CASTLE_FORGE_LOCATIONS = ['Castle Forge'];
+
+const SLOT_TYPES = {
+  Head:   ['ArmorHead'],
+  Neck:   ['ArmorNeck'],
+  Chest:  ['ArmorChest'],
+  Arms:   ['ArmorArms'],
+  Hands:  ['ArmorHands'],
+  Belt:   ['ArmorBelt', 'Tool', 'Misc'],
+  Legs:   ['ArmorLegs'],
+  Feet:   ['ArmorFeet'],
+  Weapon: ['Weapon'],
+  Shield: ['Shield', 'ArmorShield', 'Misc'],
+};
+
+function itemFitsSlot(item, slot) {
+  const allowed = SLOT_TYPES[slot];
+  if (!allowed) return false;
+  return allowed.includes(item.type);
+}
+
+function atForge()        { return FORGE_LOCATIONS.some(l => state.loc.toLowerCase().includes(l.toLowerCase())); }
+function atCastleForge()  { return CASTLE_FORGE_LOCATIONS.some(l => state.loc.toLowerCase().includes(l.toLowerCase())); }
+
+// ── RECIPE DEFINITIONS ───────────────────────────────────────────────────────
+// ingredient: { name, qty }
+// output:     { name, type, qty, reqStr, damage, defense, value }
+// skill:      skill name to check/increment
+// skillReq:   minimum skill level
+// forgeReq:   'village' | 'castle' | null
+// consumable: true = show Use button at craft time
+// hp:         HP restored if consumable
+
+const RECIPES = {
+  leather: [
+    // Raw material processing
+    {
+      id: 'cure_hide', name: 'Cure Hide', skill: 'Leathercraft', skillReq: 0,
+      ingredients: [{ name: 'Raw Hide', qty: 1 }],
+      output: { name: 'Cured Leather', type: 'Misc', qty: 1, reqStr: null, damage: 0, defense: 0, value: '1g', weight: 2 },
+      desc: 'Salt and oak bark, weeks in the vat. The smell never leaves.'
+    },
+    {
+      id: 'harden_leather', name: 'Harden Leather (Cuir Bouilli)', skill: 'Leathercraft', skillReq: 43,
+      ingredients: [{ name: 'Cured Leather', qty: 1 }, { name: 'Beeswax', qty: 1 }],
+      output: { name: 'Hardened Leather', type: 'Misc', qty: 1, reqStr: null, damage: 0, defense: 0, value: '3g', weight: 2 },
+      desc: 'Boiled in wax until rigid. Holds its shape when it cools.'
+    },
+    // Utility
+    {
+      id: 'leather_strap', name: 'Leather Strap', skill: 'Leathercraft', skillReq: 10,
+      ingredients: [{ name: 'Cured Leather', qty: 1 }],
+      output: { name: 'Leather Strap', type: 'Misc', qty: 3, reqStr: null, damage: 0, defense: 0, value: '1g', weight: 1 },
+      desc: 'Belt, lashing, repair material. Always useful.'
+    },
+    {
+      id: 'belt_pouch', name: 'Belt & Pouch', skill: 'Leathercraft', skillReq: 12,
+      ingredients: [{ name: 'Cured Leather', qty: 2 }],
+      output: { name: 'Belt & Pouch', type: 'Tool', qty: 1, reqStr: null, damage: 0, defense: 0, value: '2g', weight: 1 },
+      desc: 'A man with a pouch looks less desperate than a man without one.'
+    },
+    {
+      id: 'axe', name: 'Axe', skill: 'Leathercraft', skillReq: 12,
+      ingredients: [{ name: 'Axe Head', qty: 1 }, { name: 'Leather Strap', qty: 1 }],
+      output: { name: 'Axe', type: 'Weapon', qty: 1, reqStr: 12, damage: 7, defense: 0, value: '8g', weight: 5 },
+      desc: 'Head fitted to a wooden haft, wrapped with leather for grip. A woodcutter\'s tool and a soldier\'s backup.'
+    },
+    {
+      id: 'tanning_knife', name: 'Tanning Knife', skill: 'Leathercraft', skillReq: 22,
+      ingredients: [{ name: 'Knife Blade', qty: 1 }, { name: 'Leather Strap', qty: 1 }],
+      output: { name: 'Tanning Knife', type: 'Weapon', qty: 1, reqStr: 8, damage: 3, defense: 0, value: '2g', weight: 1 },
+      desc: 'A blade fitted with a leather handle. The tanner\'s most essential tool.'
+    },
+    {
+      id: 'knife_sheath', name: 'Knife Sheath', skill: 'Leathercraft', skillReq: 22,
+      ingredients: [{ name: 'Cured Leather', qty: 1 }],
+      output: { name: 'Knife Sheath', type: 'Tool', qty: 1, reqStr: null, damage: 0, defense: 0, value: '1g', weight: 0 },
+      desc: 'Wet-molded to fit. A sheathed blade is a respectable blade.'
+    },
+    {
+      id: 'leather_shoes', name: 'Leather Shoes', skill: 'Leathercraft', skillReq: 18,
+      ingredients: [{ name: 'Cured Leather', qty: 3 }],
+      output: { name: 'Leather Shoes', type: 'ArmorFeet', qty: 1, reqStr: null, damage: 0, defense: 1, value: '3g', weight: 2 },
+      desc: 'Simple turnshoe construction. Better than bare feet on the road.'
+    },
+    // Commission
+    {
+      id: 'riding_leathers', name: 'Riding Leathers', skill: 'Leathercraft', skillReq: 20, noFail: true,
+      ingredients: [{ name: 'Unfinished Leathers', qty: 1 }],
+      output: { name: 'Riding Leathers', type: 'ArmorChest', qty: 1, reqStr: null, damage: 0, defense: 3, value: '8g', weight: 5 },
+      desc: "Lord Dietmar's commission. His father cut it. Werner finishes it."
+    },
+    // Armor — mid
+    {
+      id: 'leather_gloves', name: 'Leather Gloves', skill: 'Leathercraft', skillReq: 22,
+      ingredients: [{ name: 'Cured Leather', qty: 1 }],
+      output: { name: 'Leather Gloves', type: 'ArmorHands', qty: 1, reqStr: null, damage: 0, defense: 1, value: '2g', weight: 1 },
+      desc: 'Protects the hands. A tanner already knows why that matters.'
+    },
+    {
+      id: 'leather_cap', name: 'Leather Cap', skill: 'Leathercraft', skillReq: 26,
+      ingredients: [{ name: 'Cured Leather', qty: 2 }],
+      output: { name: 'Leather Cap', type: 'ArmorHead', qty: 1, reqStr: null, damage: 0, defense: 1, value: '2g', weight: 1 },
+      desc: 'Simple, unadorned. Better than nothing in a scuffle.'
+    },
+    {
+      id: 'leather_jerkin', name: 'Leather Jerkin', skill: 'Leathercraft', skillReq: 30,
+      ingredients: [{ name: 'Cured Leather', qty: 4 }],
+      output: { name: 'Leather Jerkin', type: 'ArmorChest', qty: 1, reqStr: null, damage: 0, defense: 2, value: '5g', weight: 3 },
+      desc: 'A tanner making his own armor. The irony is not lost.'
+    },
+    // Armor — high (hardened)
+    {
+      id: 'hardened_arm_guards', name: 'Hardened Arm Guards', skill: 'Leathercraft', skillReq: 50,
+      ingredients: [{ name: 'Hardened Leather', qty: 2 }],
+      output: { name: 'Hardened Arm Guards', type: 'ArmorArms', qty: 1, reqStr: null, damage: 0, defense: 2, value: '6g', weight: 3 },
+      desc: 'Rigid at the forearm. Turns a blade that a soft jerkin would not.'
+    },
+    {
+      id: 'hardened_leg_guards', name: 'Hardened Leg Guards', skill: 'Leathercraft', skillReq: 50,
+      ingredients: [{ name: 'Hardened Leather', qty: 3 }],
+      output: { name: 'Hardened Leg Guards', type: 'ArmorLegs', qty: 1, reqStr: null, damage: 0, defense: 2, value: '7g', weight: 3 },
+      desc: 'The legs are always forgotten until they are not.'
+    },
+    {
+      id: 'cuir_bouilli_breastplate', name: 'Cuir Bouilli Breastplate', skill: 'Leathercraft', skillReq: 58,
+      ingredients: [{ name: 'Hardened Leather', qty: 4 }],
+      output: { name: 'Cuir Bouilli Breastplate', type: 'ArmorChest', qty: 1, reqStr: null, damage: 0, defense: 5, value: '14g', weight: 5 },
+      desc: 'The shape held by the wax. Lighter than iron, harder than it looks.'
+    },
+    {
+      id: 'hardened_helm', name: 'Hardened Helm', skill: 'Leathercraft', skillReq: 66,
+      ingredients: [{ name: 'Hardened Leather', qty: 3 }],
+      output: { name: 'Hardened Leather Helm', type: 'ArmorHead', qty: 1, reqStr: null, damage: 0, defense: 3, value: '10g', weight: 3 },
+      desc: 'Molded over a form. Not iron, but it keeps the skull together.'
+    },
+    {
+      id: 'waxed_riding_coat', name: 'Waxed Riding Coat', skill: 'Leathercraft', skillReq: 73,
+      ingredients: [{ name: 'Hardened Leather', qty: 4 }, { name: 'Beeswax', qty: 2 }],
+      output: { name: 'Waxed Riding Coat', type: 'ArmorChest', qty: 1, reqStr: null, damage: 0, defense: 3, value: '16g', weight: 5 },
+      desc: 'Sealed against weather. The kind of coat a man on the road needs.'
+    },
+  ],
+
+  blacksmith: [
+    // Smelting
+    {
+      id: 'smelt_iron', name: 'Smelt Iron Ingot', skill: 'Blacksmithy', skillReq: 0, forgeReq: 'village',
+      ingredients: [{ name: 'Iron Ore', qty: 2 }],
+      output: { name: 'Iron Ingot', type: 'Misc', qty: 1, reqStr: null, damage: 0, defense: 0, value: '3g', weight: 5 },
+      desc: 'Two ore into one ingot. The waste is the price of knowledge.'
+    },
+    {
+      id: 'smelt_silver', name: 'Smelt Silver Ingot', skill: 'Blacksmithy', skillReq: 10, forgeReq: 'village',
+      ingredients: [{ name: 'Silver Ore', qty: 2 }],
+      output: { name: 'Silver Ingot', type: 'Misc', qty: 1, reqStr: null, damage: 0, defense: 0, value: '8g', weight: 3 },
+      desc: 'Silver smelts cleaner than iron. Worth more too.'
+    },
+    // Pickaxe
+    {
+      id: 'pickaxe', name: 'Pickaxe', skill: 'Blacksmithy', skillReq: 12, forgeReq: 'village',
+      ingredients: [{ name: 'Iron Ingot', qty: 2 }, { name: 'Leather Strap', qty: 1 }],
+      output: { name: 'Pickaxe', type: 'Tool', qty: 1, reqStr: null, damage: 0, defense: 0, value: '5g', weight: 4 },
+      desc: 'Without this, ore stays in the ground.'
+    },
+    // Utility — village forge
+    {
+      id: 'nails', name: 'Nails', skill: 'Blacksmithy', skillReq: 5, forgeReq: 'village',
+      ingredients: [{ name: 'Iron Ingot', qty: 1 }],
+      output: { name: 'Nails', type: 'Misc', qty: 20, reqStr: null, damage: 0, defense: 0, value: '1g', weight: 1 },
+      desc: 'Every village always needs nails.'
+    },
+    {
+      id: 'hook_buckles', name: 'Hooks & Buckles', skill: 'Blacksmithy', skillReq: 6, forgeReq: 'village',
+      ingredients: [{ name: 'Iron Ingot', qty: 1 }],
+      output: { name: 'Iron Buckles', type: 'Misc', qty: 5, reqStr: null, damage: 0, defense: 0, value: '1g', weight: 1 },
+      desc: 'Hardware for leatherwork and saddles. Feeds Leathercraft.'
+    },
+    {
+      id: 'arrowheads', name: 'Iron Arrowhead', skill: 'Blacksmithy', skillReq: 8, forgeReq: 'village',
+      ingredients: [{ name: 'Iron Ingot', qty: 1 }],
+      output: { name: 'Iron Arrowhead', type: 'Misc', qty: 10, reqStr: null, damage: 0, defense: 0, value: '1g', weight: 0 },
+      desc: 'Feeds into Bowcraft. Bodkin point — simple, effective.'
+    },
+    {
+      id: 'knife_blade', name: 'Knife Blade', skill: 'Blacksmithy', skillReq: 10, forgeReq: 'village',
+      ingredients: [{ name: 'Iron Ingot', qty: 1 }],
+      output: { name: 'Knife Blade', type: 'Misc', qty: 1, reqStr: null, damage: 0, defense: 0, value: '2g', weight: 1 },
+      desc: 'Needs a handle and sheath to be a proper knife.'
+    },
+    {
+      id: 'horseshoe', name: 'Horseshoe', skill: 'Blacksmithy', skillReq: 12, forgeReq: 'village',
+      ingredients: [{ name: 'Iron Ingot', qty: 2 }],
+      output: { name: 'Horseshoe', type: 'Misc', qty: 4, reqStr: null, damage: 0, defense: 0, value: '3g', weight: 2 },
+      desc: 'Sellable anywhere there are horses, which is everywhere.'
+    },
+    // Assembly
+    {
+      id: 'iron_knife', name: 'Iron Knife', skill: 'Blacksmithy', skillReq: 15, forgeReq: 'village',
+      ingredients: [{ name: 'Knife Blade', qty: 1 }, { name: 'Knife Sheath', qty: 1 }],
+      output: { name: 'Iron Knife', type: 'Weapon', qty: 1, reqStr: 8, damage: 4, defense: 0, value: '4g', weight: 2 },
+      desc: 'Blade and sheath together. A proper tool.'
+    },
+    {
+      id: 'axe_head', name: 'Axe Head', skill: 'Blacksmithy', skillReq: 15, forgeReq: 'village',
+      ingredients: [{ name: 'Iron Ingot', qty: 2 }],
+      output: { name: 'Axe Head', type: 'Misc', qty: 1, reqStr: null, damage: 0, defense: 0, value: '4g', weight: 4 },
+      desc: 'Forged iron, wedge-shaped. Needs a handle before it is anything but a weight.'
+    },
+    {
+      id: 'iron_fittings', name: 'Iron Fittings (Armor Reinforcement)', skill: 'Blacksmithy', skillReq: 30, forgeReq: 'village',
+      ingredients: [{ name: 'Iron Ingot', qty: 1 }],
+      output: { name: 'Iron Fittings', type: 'Misc', qty: 3, reqStr: null, damage: 0, defense: 0, value: '2g', weight: 1 },
+      desc: 'Riveted onto leather, adds +1 Defense to an existing piece. Tell the narrator.'
+    },
+    {
+      id: 'spear_tip', name: 'Spear Tip', skill: 'Blacksmithy', skillReq: 20, forgeReq: 'village',
+      ingredients: [{ name: 'Iron Ingot', qty: 2 }],
+      output: { name: 'Spear Tip', type: 'Misc', qty: 1, reqStr: null, damage: 0, defense: 0, value: '3g', weight: 2 },
+      desc: 'Needs a wood shaft to be a spear. Tell the narrator to assemble it.'
+    },
+    {
+      id: 'mace_head', name: 'Mace Head', skill: 'Blacksmithy', skillReq: 25, forgeReq: 'village',
+      ingredients: [{ name: 'Iron Ingot', qty: 3 }],
+      output: { name: 'Mace Head', type: 'Misc', qty: 1, reqStr: null, damage: 0, defense: 0, value: '4g', weight: 3 },
+      desc: 'Flanged iron. Needs a wood handle. Tell the narrator to assemble it.'
+    },
+    // Castle forge — steel
+    {
+      id: 'steel_sword', name: 'Steel Sword', skill: 'Blacksmithy', skillReq: 50, forgeReq: 'castle',
+      ingredients: [{ name: 'Steel Ingot', qty: 3 }],
+      output: { name: 'Steel Sword', type: 'Weapon', qty: 1, reqStr: 16, damage: 9, defense: 0, value: '22g', weight: 6 },
+      desc: 'Castle forge steel. A different quality entirely.'
+    },
+    {
+      id: 'chainmail_coif', name: 'Chainmail Coif', skill: 'Blacksmithy', skillReq: 50, forgeReq: 'castle',
+      ingredients: [{ name: 'Iron Ingot', qty: 4 }],
+      output: { name: 'Chainmail Coif', type: 'ArmorHead', qty: 1, reqStr: null, damage: 0, defense: 4, value: '18g', weight: 4 },
+      desc: 'Drawn wire, linked by hand. Days of work. Turns a blade at the neck.'
+    },
+    {
+      id: 'iron_pauldrons', name: 'Iron Pauldrons', skill: 'Blacksmithy', skillReq: 55, forgeReq: 'castle',
+      ingredients: [{ name: 'Steel Ingot', qty: 5 }],
+      output: { name: 'Iron Pauldrons', type: 'ArmorArms', qty: 1, reqStr: 14, damage: 0, defense: 4, value: '20g', weight: 5 },
+      desc: 'Shoulder protection. A man with pauldrons is a man someone equipped.'
+    },
+    {
+      id: 'iron_breastplate', name: 'Iron Breastplate', skill: 'Blacksmithy', skillReq: 65, forgeReq: 'castle',
+      ingredients: [{ name: 'Steel Ingot', qty: 8 }],
+      output: { name: 'Iron Breastplate', type: 'ArmorChest', qty: 1, reqStr: 16, damage: 0, defense: 7, value: '35g', weight: 8 },
+      desc: 'The endgame of the arming process. Heavy, obvious, protective.'
+    },
+  ],
+
+  alchemy: [
+    {
+      id: 'poultice', name: 'Poultice', skill: 'Alchemy', skillReq: 0, consumable: true, hp: 15,
+      ingredients: [{ name: 'Yarrow', qty: 1 }, { name: 'Linen Cloth', qty: 1 }],
+      output: { name: 'Poultice', type: 'Food', qty: 1, reqStr: null, damage: 0, defense: 0, value: '1g' },
+      desc: 'Packed on a wound. Slows bleeding. Smells of the field.'
+    },
+    {
+      id: 'torch', name: 'Torch', skill: 'Alchemy', skillReq: 0,
+      ingredients: [{ name: 'Tallow', qty: 1 }, { name: 'Wood', qty: 1 }],
+      output: { name: 'Torch', type: 'Misc', qty: 3, reqStr: null, damage: 0, defense: 0, value: '1g', weight: 1 },
+      desc: 'Tallow-soaked wood. Burns for an hour. Keeps wolves at distance. Equip in Shield slot.'
+    },
+    {
+      id: 'tallow_candle', name: 'Tallow Candle', skill: 'Alchemy', skillReq: 0,
+      ingredients: [{ name: 'Tallow', qty: 1 }, { name: 'Linen Cloth', qty: 1 }],
+      output: { name: 'Tallow Candle', type: 'Tool', qty: 3, reqStr: null, damage: 0, defense: 0, value: '1g' },
+      desc: 'Light. Sellable. Every household needs them.'
+    },
+    {
+      id: 'vinegar_wash', name: 'Vinegar Wash', skill: 'Alchemy', skillReq: 8, consumable: true, hp: 5,
+      ingredients: [{ name: 'Vinegar', qty: 1 }, { name: 'Yarrow', qty: 1 }],
+      output: { name: 'Vinegar Wash', type: 'Food', qty: 1, reqStr: null, damage: 0, defense: 0, value: '1g' },
+      desc: 'Applied to wounds. Slows infection. The smell is the medicine.'
+    },
+    {
+      id: 'fever_tea', name: 'Fever Tea', skill: 'Alchemy', skillReq: 10, consumable: true, hp: 10,
+      ingredients: [{ name: 'Willow Bark', qty: 1 }],
+      output: { name: 'Fever Tea', type: 'Food', qty: 1, reqStr: null, damage: 0, defense: 0, value: '1g' },
+      desc: 'Willow bark in boiled water. Reduces fever. Actually works.'
+    },
+    {
+      id: 'wound_salve', name: 'Wound Salve', skill: 'Alchemy', skillReq: 20, consumable: true, hp: 25,
+      ingredients: [{ name: 'Honey', qty: 1 }, { name: 'Yarrow', qty: 1 }, { name: 'Beeswax', qty: 1 }],
+      output: { name: 'Wound Salve', type: 'Food', qty: 1, reqStr: null, damage: 0, defense: 0, value: '3g' },
+      desc: 'Honey draws poison. Yarrow stops bleeding. Wax holds it in place.'
+    },
+    {
+      id: 'plague_pomander', name: 'Aromatic Pomander', skill: 'Alchemy', skillReq: 25,
+      ingredients: [{ name: 'Aromatic Herbs', qty: 2 }, { name: 'Beeswax', qty: 1 }, { name: 'Vinegar', qty: 1 }],
+      output: { name: 'Aromatic Pomander', type: 'Misc', qty: 1, reqStr: null, damage: 0, defense: 0, value: '4g' },
+      desc: "Against bad airs and the stench of the road. Sellable to travelers and merchants."
+    },
+    {
+      id: 'sleeping_draught', name: 'Sleeping Draught', skill: 'Alchemy', skillReq: 30, consumable: true, hp: 0,
+      ingredients: [{ name: 'Valerian Root', qty: 1 }, { name: 'Wine', qty: 1 }],
+      output: { name: 'Sleeping Draught', type: 'Food', qty: 1, reqStr: null, damage: 0, defense: 0, value: '3g' },
+      desc: 'Valerian in wine. Sedates. Useful in ways the narrator will understand.'
+    },
+    {
+      id: 'aqua_vitae', name: 'Aqua Vitae', skill: 'Alchemy', skillReq: 35,
+      ingredients: [{ name: 'Wine', qty: 2 }],
+      output: { name: 'Aqua Vitae', type: 'Food', qty: 1, reqStr: null, damage: 0, defense: 0, value: '5g' },
+      desc: 'Distilled spirits. Disinfectant, trade good, comfort. All three at once.'
+    },
+    {
+      id: 'leather_preservative', name: 'Leather Preservative', skill: 'Alchemy', skillReq: 40,
+      ingredients: [{ name: 'Pine Resin', qty: 1 }, { name: 'Tallow', qty: 1 }, { name: 'Beeswax', qty: 1 }],
+      output: { name: 'Leather Preservative', type: 'Misc', qty: 1, reqStr: null, damage: 0, defense: 0, value: '3g' },
+      desc: 'Applied to leather armor. Tell the narrator — it adds Defense and weatherproofing.'
+    },
+    {
+      id: 'antifever_compound', name: 'Antifever Compound', skill: 'Alchemy', skillReq: 43, consumable: true, hp: 40,
+      ingredients: [{ name: 'Willow Bark', qty: 2 }, { name: 'Vinegar', qty: 1 }, { name: 'Honey', qty: 1 }],
+      output: { name: 'Antifever Compound', type: 'Food', qty: 1, reqStr: null, damage: 0, defense: 0, value: '6g' },
+      desc: 'Strong medicine. Actually addresses fever rather than masking it.'
+    },
+    {
+      id: 'black_salve', name: 'Black Salve', skill: 'Alchemy', skillReq: 50, consumable: true, hp: 20,
+      ingredients: [{ name: 'Charcoal', qty: 1 }, { name: 'Honey', qty: 1 }, { name: 'Aromatic Herbs', qty: 1 }],
+      output: { name: 'Black Salve', type: 'Food', qty: 1, reqStr: null, damage: 0, defense: 0, value: '5g' },
+      desc: 'Drawing salve. Pulls infection from wounds. Historically used. Historically effective.'
+    },
+  ],
+
+  bowcraft: [
+    {
+      id: 'wood_shaft', name: 'Arrow Shafts', skill: 'Bowcraft', skillReq: 0,
+      ingredients: [{ name: 'Wood', qty: 1 }],
+      output: { name: 'Arrow Shaft', type: 'Misc', qty: 10, reqStr: null, damage: 0, defense: 0, value: '1h', weight: 0 },
+      desc: 'Straight-grained wood, split and shaved. The foundation of every arrow.'
+    },
+    {
+      id: 'arrows', name: 'Arrows', skill: 'Bowcraft', skillReq: 0,
+      ingredients: [{ name: 'Arrow Shaft', qty: 10 }, { name: 'Iron Arrowhead', qty: 10 }, { name: 'Feather', qty: 5 }],
+      output: { name: 'Arrow', type: 'Misc', qty: 10, reqStr: null, damage: 0, defense: 0, value: '1g', weight: 0 },
+      desc: 'Fletched and tipped. Ten arrows, ready to fly.'
+    },
+    {
+      id: 'short_bow', name: 'Short Bow', skill: 'Bowcraft', skillReq: 15,
+      ingredients: [{ name: 'Wood', qty: 3 }, { name: 'Leather Strap', qty: 1 }],
+      output: { name: 'Short Bow', type: 'Weapon', qty: 1, reqStr: 8, damage: 5, defense: 0, value: '6g', weight: 2 },
+      desc: 'A hunting bow. Short draw, short range. Enough for small game and desperate men.'
+    },
+    {
+      id: 'long_bow', name: 'Long Bow', skill: 'Bowcraft', skillReq: 35,
+      ingredients: [{ name: 'Seasoned Wood', qty: 2 }, { name: 'Leather Strap', qty: 1 }],
+      output: { name: 'Long Bow', type: 'Weapon', qty: 1, reqStr: 14, damage: 8, defense: 0, value: '12g', weight: 3 },
+      desc: 'Requires seasoned wood — dried for at least a season. The difference shows in the draw.'
+    },
+  ],
+};
+
+// ── CRAFTING LOGIC ────────────────────────────────────────────────────────────
+
+let currentCraftTab = 'leather';
+
+function openCraftPanel() {
+  document.getElementById('craft-panel').classList.add('open');
+  renderCraftTab(currentCraftTab);
+}
+
+function closeCraftPanel() {
+  document.getElementById('craft-panel').classList.remove('open');
+}
+
+function switchCraftTab(tab) {
+  currentCraftTab = tab;
+  document.querySelectorAll('.craft-tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  renderCraftTab(tab);
+}
+
+function normalizeName(name) {
+  return name.toLowerCase().replace(/s$/, '');
+}
+
+function hasIngredients(ingredients) {
+  return ingredients.every(req => {
+    const item = state.inventory.find(i => normalizeName(i.name) === normalizeName(req.name));
+    return item && item.qty >= req.qty;
+  });
+}
+
+function missingIngredients(ingredients) {
+  return ingredients.filter(req => {
+    const item = state.inventory.find(i => normalizeName(i.name) === normalizeName(req.name));
+    return !item || item.qty < req.qty;
+  });
+}
+
+function renderCraftTab(tab) {
+  const body = document.getElementById('craft-body');
+  body.innerHTML = '';
+
+  if (tab === 'forage') {
+    renderForageTab(body);
+    return;
+  }
+
+  const recipes = RECIPES[tab] || [];
+
+  for (const recipe of recipes) {
+    // Check forge requirement
+    let forgeBlocked = false;
+    let forgeMsg = '';
+    if (recipe.forgeReq === 'village' && !atForge()) {
+      forgeBlocked = true;
+      forgeMsg = 'Requires: forge';
+    }
+    if (recipe.forgeReq === 'castle' && !atCastleForge()) {
+      forgeBlocked = true;
+      forgeMsg = 'Requires: castle forge';
+    }
+
+    // Check skill
+    const skillVal = state.skills[recipe.skill] ?? 0;
+    const skillMet = skillVal >= recipe.skillReq;
+
+    // Check ingredients
+    const canCraft = hasIngredients(recipe.ingredients) && skillMet && !forgeBlocked;
+    const missing  = missingIngredients(recipe.ingredients);
+
+    const div = document.createElement('div');
+    div.className = 'craft-recipe';
+
+    // Output stat string
+    let statStr = '';
+    if (recipe.output.damage > 0)  statStr = `DMG ${recipe.output.damage}`;
+    if (recipe.output.defense > 0) statStr = `DEF ${recipe.output.defense}`;
+    if (recipe.consumable && recipe.hp > 0) statStr = `+${recipe.hp} HP`;
+
+    // Ingredients display
+    const ingDisplay = recipe.ingredients.map(req => {
+      const isMissing = missing.some(m => m.name === req.name);
+      return `<span class="${isMissing ? 'missing' : ''}">${req.name} ×${req.qty}</span>`;
+    }).join(' + ');
+
+    div.innerHTML = `
+      <div class="craft-recipe-header">
+        <span class="craft-recipe-name">${recipe.name}</span>
+        <span class="craft-recipe-stat">${statStr}</span>
+      </div>
+      <div class="craft-recipe-ingredients">${ingDisplay}</div>
+      <div style="font-family:var(--font-prose);font-size:0.78rem;color:var(--text-dim);font-style:italic;margin:2px 0">${recipe.desc}</div>
+      <div class="craft-recipe-footer">
+        <span class="craft-recipe-req ${!skillMet ? 'unmet' : ''}">${recipe.skill} ${recipe.skillReq}${forgeBlocked ? ' · ' + forgeMsg : ''}${skillMet && !forgeBlocked && !recipe.noFail ? ' · ' + Math.max(0, 40 - (skillVal - recipe.skillReq) * 4) + '% fail' : ''}${skillMet && !forgeBlocked ? ' · ' + Math.max(5, 100 - (skillVal - recipe.skillReq) * 10) + '% gain' : ''}</span>
+        <div style="display:flex;gap:6px">
+          ${recipe.consumable && canCraft ? `<button class="craft-btn use-btn" onclick="useRecipe('${recipe.id}','${tab}')">Use</button>` : ''}
+          <button class="craft-btn" onclick="craftRecipe('${recipe.id}','${tab}')" ${canCraft ? '' : 'disabled'}>Craft</button>
+        </div>
+      </div>`;
+
+    body.appendChild(div);
+  }
+}
+
+function craftSkillGainChance(recipe) {
+  const skill = state.skills[recipe.skill] ?? 0;
+  return Math.max(5, 100 - (skill - recipe.skillReq) * 10);
+}
+
+function craftFailChance(recipe) {
+  const skill = state.skills[recipe.skill] ?? 0;
+  return Math.max(0, 40 - (skill - recipe.skillReq) * 4);
+}
+
+function craftRecipe(id, tab) {
+  const recipe = RECIPES[tab].find(r => r.id === id);
+  if (!recipe) return;
+  if (!hasIngredients(recipe.ingredients)) return;
+
+  // Immediately disable all craft/use buttons to prevent double-click
+  document.querySelectorAll('.craft-btn').forEach(b => b.disabled = true);
+
+  // Consume ingredients always
+  for (const req of recipe.ingredients) {
+    const item = state.inventory.find(i => normalizeName(i.name) === normalizeName(req.name));
+    if (item) {
+      item.qty -= req.qty;
+      if (item.qty <= 0) state.inventory = state.inventory.filter(i => i !== item);
+    }
+  }
+
+  // Skill gain — chance based on recipe difficulty relative to current skill
+  const gainChance = craftSkillGainChance(recipe);
+  const didGain = Math.random() * 100 < gainChance;
+  if (didGain && state.skills[recipe.skill] !== undefined) {
+    state.skills[recipe.skill] = Math.min(100, (state.skills[recipe.skill] || 0) + 2);
+  }
+
+  // Fail check
+  const failChance = craftFailChance(recipe);
+  const failed = !recipe.noFail && Math.random() * 100 < failChance;
+
+  if (failed) {
+    recalcDerived();
+    updateUI();
+    renderCraftTab(tab);
+    renderEntry(`*The work comes apart. Werner's hands know what went wrong before his mind does. The materials are spent.*`, null, []);
+    const failSkillTag = { type: 'skill', key: recipe.skill, delta: 2, raw: `[${recipe.skill}: +2]` };
+    renderEntry('', null, [failSkillTag]);
+    return;
+  }
+
+  // Add output
+  const out = recipe.output;
+  const existing = state.inventory.find(i => i.name.toLowerCase() === out.name.toLowerCase());
+  if (existing) {
+    existing.qty += out.qty;
+  } else {
+    state.inventory.push({
+      name: out.name, type: out.type, qty: out.qty,
+      reqStr: out.reqStr, damage: out.damage, defense: out.defense,
+      value: out.value, weight: out.weight ?? 1
+    });
+  }
+
+  recalcDerived();
+  updateUI();
+  renderCraftTab(tab);
+  renderEntry(`*You successfully crafted ${out.name}.*`, null, []);
+  if (didGain) {
+    const skillTag = { type: 'skill', key: recipe.skill, delta: 1, raw: `[${recipe.skill}: +1]` };
+    renderEntry('', null, [skillTag]);
+  }
+}
+
+function useRecipe(id, tab) {
+  const recipe = RECIPES[tab].find(r => r.id === id);
+  if (!recipe || !recipe.consumable) return;
+  if (!hasIngredients(recipe.ingredients)) return;
+
+  // Immediately disable all craft/use buttons to prevent double-click
+  document.querySelectorAll('.craft-btn').forEach(b => b.disabled = true);
+
+  // Consume ingredients always
+  for (const req of recipe.ingredients) {
+    const item = state.inventory.find(i => normalizeName(i.name) === normalizeName(req.name));
+    if (item) {
+      item.qty -= req.qty;
+      if (item.qty <= 0) state.inventory = state.inventory.filter(i => i !== item);
+    }
+  }
+
+  // Skill gain — chance based on recipe difficulty relative to current skill
+  const useGainChance = craftSkillGainChance(recipe);
+  const useDidGain = Math.random() * 100 < useGainChance;
+  if (useDidGain && state.skills[recipe.skill] !== undefined) {
+    state.skills[recipe.skill] = Math.min(100, (state.skills[recipe.skill] || 0) + 2);
+  }
+
+  // Fail check
+  const failChance = craftFailChance(recipe);
+  const failed = Math.random() * 100 < failChance;
+
+  if (failed) {
+    recalcDerived();
+    updateUI();
+    renderCraftTab(tab);
+    renderEntry(`*The preparation goes wrong. Werner's hands know what went wrong before his mind does. The materials are spent.*`, null, []);
+    const useFailSkillTag = { type: 'skill', key: recipe.skill, delta: 1, raw: `[${recipe.skill}: +1]` };
+    renderEntry('', null, [useFailSkillTag]);
+    return;
+  }
+
+  // Apply HP
+  if (recipe.hp > 0) {
+    state.hp = Math.min(state.hpMax, state.hp + recipe.hp);
+  }
+
+  recalcDerived();
+  updateUI();
+  renderCraftTab(tab);
+  renderEntry(`*You successfully crafted ${recipe.name}.*`, null, []);
+  if (useDidGain) {
+    const useSkillTag = { type: 'skill', key: recipe.skill, delta: 1, raw: `[${recipe.skill}: +1]` };
+    renderEntry('', null, [useSkillTag]);
+  }
+}
+
+function showCraftToast(msg) {
+  let toast = document.getElementById('craft-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'craft-toast';
+    toast.style.cssText = `
+      position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+      background:var(--bg-panel-alt);border:1px solid var(--amber-dim);
+      color:var(--amber);font-family:var(--font-ui);font-size:0.55rem;
+      letter-spacing:2px;padding:8px 18px;z-index:9000;
+      transition:opacity 0.4s;pointer-events:none;
+    `;
+    document.body.appendChild(toast);
+  }
+  toast.textContent = msg;
+  toast.style.opacity = '1';
+  clearTimeout(toast._timeout);
+  toast._timeout = setTimeout(() => toast.style.opacity = '0', 2000);
+}
+
+// ── FORAGE ────────────────────────────────────────────────────────────────────
+
+let isForaging = false;
+let forageCount = 0;      // how many times foraged this turn
+let forageTurnSeen = -1;  // which turn the count belongs to
+let forageCap = 2;        // 2 or 3, re-rolled each turn
+
+// Herb pools by location type. Each entry: [name, minHerbalism, weight]
+// weight controls relative rarity within the pool.
+const FORAGE_POOLS = {
+  forest: [
+    ['Yarrow',         0,  5],
+    ['Nettles',        0,  4],
+    ['Mushrooms',      0,  3],
+    ['Feather',        0,  5],
+    ['Pine Resin',     8,  4],
+    ['Aromatic Herbs', 8,  3],
+    ['Willow Bark',   12,  3],
+    ['Valerian Root', 26,  2],
+  ],
+  village: [
+    ['Yarrow',         0,  6],
+    ['Nettles',        0,  5],
+    ['Feather',        0,  5],
+    ['Aromatic Herbs', 8,  4],
+    ['Willow Bark',   12,  3],
+    ['Mushrooms',      0,  2],
+  ],
+  road: [
+    ['Yarrow',         0,  5],
+    ['Nettles',        0,  4],
+    ['Feather',        0,  4],
+    ['Aromatic Herbs', 8,  3],
+    ['Willow Bark',   12,  2],
+  ],
+  default: [
+    ['Yarrow',         0,  6],
+    ['Nettles',        0,  5],
+    ['Feather',        0,  4],
+    ['Mushrooms',      0,  3],
+    ['Aromatic Herbs', 8,  3],
+  ],
+};
+
+// Flavor prose by outcome and location type.
+const FORAGE_PROSE = {
+  fail: [
+    'Werner works the verge for a while, turning over leaves and checking the bank of the ditch. Nothing worth taking.',
+    'The ground here has been picked over, or the season is wrong for it. Werner comes away empty-handed.',
+    'He searches longer than he means to. A few dead stems, nothing green enough to use. He gives it up.',
+    'The light is bad and his eye is not yet trained for this. He finds nothing he recognizes.',
+  ],
+  success: {
+    forest: [
+      'Werner moves through the understory, checking the north-facing banks where the moisture holds. He takes what he can find and moves on.',
+      'The forest floor is damp here. He works methodically, pulling only what he recognizes, leaving the rest.',
+      'Under the canopy the light comes in patches. Werner keeps low, checking the root-line. A small find, but honest work.',
+    ],
+    village: [
+      'Werner checks the waste ground at the village edge — the places people walk past without looking. He finds a little.',
+      'The roadside ditch and the orchard margin. Werner moves quietly. A few useful things grow where no one tends them.',
+      'He works the hedgerow at the field margin. Not much, but enough to be worth the time.',
+    ],
+    road: [
+      'Werner walks the verge slowly, eyes on the ground. The road traffic keeps the growth thin, but something is always there for those who look.',
+      'The ditch beside the road holds more than it looks. Werner takes a little, not enough to strip it.',
+    ],
+    default: [
+      'Werner searches what ground is available. He finds a little. Less than he hoped.',
+      'A careful look around turns up something useful. Not much — but something.',
+    ],
+  },
+};
+
+function getForagePoolKey(loc) {
+  const l = loc.toLowerCase();
+  if (l.includes('forest')) return 'forest';
+  if (l.includes('village') || l.includes('home') || l.includes('goose') ||
+      l.includes('smithy') || l.includes('stables') || l.includes('hut') ||
+      l.includes('estate') || l.includes('ilse') || l.includes('oswin')) return 'village';
+  if (l.includes('road') || l.includes('breslau') || l.includes('gate') ||
+      l.includes('market') || l.includes('guild')) return 'road';
+  return 'default';
+}
+
+function pickFromPool(poolKey, herbalism) {
+  const eligible = FORAGE_POOLS[poolKey].filter(([, minSkill]) => herbalism >= minSkill);
+  if (!eligible.length) return null;
+  const total = eligible.reduce((sum, [,, w]) => sum + w, 0);
+  let r = Math.random() * total;
+  for (const entry of eligible) {
+    r -= entry[2];
+    if (r <= 0) return entry[0];
+  }
+  return eligible[eligible.length - 1][0];
+}
+
+function pickProse(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function forage() {
+  if (isForaging) return;
+
+  // Reset count & cap when a new turn starts
+  if (state.turn !== forageTurnSeen) {
+    forageTurnSeen = state.turn;
+    forageCount = 0;
+    forageCap = Math.random() < 0.5 ? 2 : 3; // 2 or 3 per turn
+  }
+
+  if (forageCount >= forageCap) {
+    const resultDiv = document.getElementById('forage-result');
+    if (resultDiv) resultDiv.textContent = 'The area is exhausted for now.';
+    return;
+  }
+
+  isForaging = true;
+  const btn = document.getElementById('btn-forage');
+  if (btn) btn.disabled = true;
+  const resultDiv = document.getElementById('forage-result');
+  if (resultDiv) resultDiv.textContent = 'Werner searches...';
+
+  const herbalism = state.skills['Herbalism'] ?? 0;
+  const poolKey   = getForagePoolKey(state.loc);
+
+  // Success threshold: base 45%, +1% per Herbalism, cap 80%
+  const successChance = Math.min(80, 45 + herbalism);
+  const success = Math.random() * 100 < successChance;
+
+  let prose = '';
+  let tags  = [];
+
+  if (!success) {
+    prose = pickProse(FORAGE_PROSE.fail);
+  } else {
+    const herb = pickFromPool(poolKey, herbalism);
+    if (!herb) {
+      prose = pickProse(FORAGE_PROSE.fail);
+    } else {
+      // Feathers: yield 2-3; others: 1 normally, 2 at Herbalism 40+ (25% chance)
+      let qty;
+      if (herb === 'Feather') {
+        qty = Math.random() < 0.5 ? 2 : 3;
+      } else {
+        qty = (herbalism >= 40 && Math.random() < 0.25) ? 2 : 1;
+      }
+      const tag = {
+        type: 'item', name: herb, itype: 'Food',
+        reqStr: null, damage: 0, defense: 0,
+        value: '1h', qty, weight: 0,
+        raw: `[Item: ${herb} | Type: Food | Value: 1h | Quantity: +${qty}]`
+      };
+      applyTags([tag]);
+      tags.push(tag);
+      const prosePool = FORAGE_PROSE.success[poolKey] ?? FORAGE_PROSE.success.default;
+      prose = pickProse(prosePool);
+    }
+  }
+
+  // Skill gain: only on success, decreasing chance as skill rises
+  const herbGainChance = Math.max(5, 100 - herbalism * 2);
+  const herbDidGain = success && Math.random() * 100 < herbGainChance;
+  if (herbDidGain) {
+    state.skills['Herbalism'] = Math.min(100, herbalism + 2);
+    tags.push({ type: 'skill', key: 'Herbalism', delta: 2, raw: '[Herbalism: +2]' });
+  }
+
+  forageCount++;
+
+  updateUI();
+  renderEntry(prose, 'Werner forages.', tags);
+
+  const remaining = forageCap - forageCount;
+  if (resultDiv) resultDiv.textContent = remaining > 0 ? `${remaining} search${remaining !== 1 ? 'es' : ''} left this turn` : 'Area exhausted for now.';
+
+  renderCraftTab('forage');
+
+  isForaging = false;
+  if (btn) btn.disabled = forageCount >= forageCap;
+}
+
+function renderForageTab(body) {
+  // Sync cap/count for current turn
+  if (state.turn !== forageTurnSeen) {
+    forageTurnSeen = state.turn;
+    forageCount = 0;
+    forageCap = Math.random() < 0.5 ? 2 : 3;
+  }
+  const exhausted = forageCount >= forageCap;
+  const remaining = forageCap - forageCount;
+  const statusText = exhausted ? 'Area exhausted for now.' : `${remaining} search${remaining !== 1 ? 'es' : ''} left this turn`;
+  body.innerHTML = `
+    <div class="craft-forage-section">
+      <div class="craft-forage-desc">Search the immediate area for herbs, bark, and useful materials. What Werner finds depends on his Herbalism skill and where he is.</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="craft-btn" id="btn-forage" onclick="forage()" ${exhausted ? 'disabled' : ''}>Search</button>
+        <span id="forage-result" style="font-family:var(--font-ui);font-size:0.5rem;color:var(--text-dim);letter-spacing:1px">${statusText}</span>
+      </div>
+    </div>
+    <div style="padding:10px 16px;border-bottom:1px solid var(--border-dim)">
+      <div style="font-family:var(--font-ui);font-size:0.48rem;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;margin-bottom:6px">Current Herbs</div>
+      ${getForageInventoryHTML()}
+    </div>`;
+}
+
+function getForageInventoryHTML() {
+  const forageItems = ['Yarrow','Aromatic Herbs','Willow Bark','Valerian Root','Pine Resin','Nettles','Mushrooms','Tallow','Honey','Beeswax','Vinegar','Wine','Charcoal','Linen Cloth','Feather'];
+  const found = state.inventory.filter(i => forageItems.includes(i.name));
+  if (!found.length) return `<div style="font-family:var(--font-prose);font-size:0.8rem;color:var(--text-dim);font-style:italic">Nothing gathered yet.</div>`;
+  return found.map(i => `
+    <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border-dim)">
+      <span style="font-family:var(--font-prose);font-size:0.82rem;color:var(--text-bone)">${i.name}</span>
+      <span style="font-family:var(--font-ui);font-size:0.6rem;color:var(--amber)">×${i.qty}</span>
+    </div>`).join('');
+}
+
+// Close panel on backdrop click
+document.getElementById('craft-panel').addEventListener('click', function(e) {
+  if (e.target === this) closeCraftPanel();
+});
+
+// ════════════════════════════════════════════════════════════════════════
+// COLLAPSIBLE SECTIONS
+// ════════════════════════════════════════════════════════════════════════
+
+function toggleCollapse(label) {
+  const content = label.nextElementSibling;
+  if (!content) return;
+  label.classList.toggle('collapsed');
+  content.classList.toggle('collapsed');
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// HOME STORAGE
+// ════════════════════════════════════════════════════════════════════════
+
+function openStoragePanel() {
+  if (state.loc !== "Werner's Home") return;
+  renderStoragePanel();
+  document.getElementById('storage-panel').classList.add('open');
+}
+
+function closeStoragePanel() {
+  document.getElementById('storage-panel').classList.remove('open');
+}
+
+function renderStoragePanel() {
+  const invList = document.getElementById('storage-inventory-list');
+  const storedList = document.getElementById('storage-stored-list');
+
+  // Inventory side — click to store
+  const equippedNames = new Set(Object.values(state.equipped).filter(Boolean).map(i => i.name));
+  const carriable = state.inventory.filter(i => !equippedNames.has(i.name));
+  invList.innerHTML = carriable.length ? carriable.map(item => `
+    <div class="storage-item" onclick="storeItem('${item.name.replace(/'/g,"\\'")}')">
+      <span class="storage-item-name">${item.name}</span>
+      <span class="storage-item-meta">×${item.qty} ▶</span>
+    </div>`).join('') : '<div class="storage-empty">Nothing to store.</div>';
+
+  // Storage side — click to carry
+  storedList.innerHTML = (state.storage || []).length ? state.storage.map(item => `
+    <div class="storage-item" onclick="retrieveItem('${item.name.replace(/'/g,"\\'")}')">
+      <span class="storage-item-name">${item.name}</span>
+      <span class="storage-item-meta">◀ ×${item.qty}</span>
+    </div>`).join('') : '<div class="storage-empty">Storage is empty.</div>';
+}
+
+function storeItem(name) {
+  const invItem = state.inventory.find(i => i.name === name);
+  if (!invItem) return;
+  state.inventory = state.inventory.filter(i => i !== invItem);
+  const existing = (state.storage || []).find(i => i.name === name);
+  if (existing) { existing.qty += invItem.qty; }
+  else { if (!state.storage) state.storage = []; state.storage.push({ ...invItem }); }
+  recalcDerived(); updateUI(); renderStoragePanel();
+}
+
+function retrieveItem(name) {
+  const storedItem = (state.storage || []).find(i => i.name === name);
+  if (!storedItem) return;
+  // Check weight
+  const addedWeight = (storedItem.weight ?? 1) * storedItem.qty;
+  if (state.weight + addedWeight > maxWeight()) {
+    showCraftToast('Too heavy to carry.');
+    return;
+  }
+  state.storage = state.storage.filter(i => i !== storedItem);
+  const existing = state.inventory.find(i => i.name === name);
+  if (existing) { existing.qty += storedItem.qty; }
+  else { state.inventory.push({ ...storedItem }); }
+  recalcDerived(); updateUI(); renderStoragePanel();
+}
+
+document.getElementById('storage-panel').addEventListener('click', function(e) {
+  if (e.target === this) closeStoragePanel();
+});
+
+// ════════════════════════════════════════════════════════════════════════
+// DERIVED STATS
+// ════════════════════════════════════════════════════════════════════════
+
+function maxWeight() { return state.str * 4; }
+
+function recalcDerived() {
+  // Damage from equipped weapon
+  const weapon = state.equipped.Weapon;
+  state.damage = weapon ? (weapon.damage ?? 0) : 0;
+
+  // Defense from all equipped armor/shields
+  state.defense = Object.values(state.equipped)
+    .filter(Boolean)
+    .reduce((sum, item) => sum + ((item.type.startsWith('Armor') || item.type === 'Shield') ? (item.defense ?? 0) : 0), 0);
+
+  // Total carried weight (inventory + equipped)
+  const invWeight = state.inventory.reduce((sum, i) => sum + (i.weight ?? 0) * i.qty, 0);
+  const equipWeight = Object.values(state.equipped)
+    .filter(Boolean)
+    .reduce((sum, i) => sum + (i.weight ?? 0), 0);
+  state.weight = invWeight + equipWeight;
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// EQUIPMENT DROPDOWN
+// ════════════════════════════════════════════════════════════════════════
+
+let activeDropdown = null;
+
+function openEquipDropdown(event, slot) {
+  event.stopPropagation();
+  closeEquipDropdown();
+
+  const dropdown = document.createElement('div');
+  dropdown.className = 'equip-dropdown';
+  dropdown.id = 'equip-dropdown';
+
+  const currentItem = state.equipped[slot];
+
+  // If something is equipped, offer to unequip first
+  if (currentItem) {
+    const unequipEl = document.createElement('div');
+    unequipEl.className = 'equip-dropdown-item unequip';
+    unequipEl.textContent = '✕ Unequip';
+    unequipEl.onclick = () => { unequip(slot); closeEquipDropdown(); };
+    dropdown.appendChild(unequipEl);
+  }
+
+  // List inventory items that fit this slot (excluding currently equipped item in this slot)
+  const candidates = state.inventory.filter(i =>
+    itemFitsSlot(i, slot) && !(currentItem && i.name === currentItem.name)
+  );
+
+  if (candidates.length === 0 && !currentItem) {
+    const empty = document.createElement('div');
+    empty.className = 'equip-dropdown-item dimmed';
+    empty.textContent = 'Nothing to equip';
+    dropdown.appendChild(empty);
+  }
+
+  for (const item of candidates) {
+    const el = document.createElement('div');
+    const unmet = item.reqStr && state.str < item.reqStr;
+    el.className = 'equip-dropdown-item' + (unmet ? ' dimmed' : '');
+    el.textContent = item.name + (unmet ? ` (STR ${item.reqStr})` : '');
+    if (!unmet) {
+      el.onclick = () => { equip(slot, item); closeEquipDropdown(); };
+    }
+    dropdown.appendChild(el);
+  }
+
+  // Position near the clicked element
+  const rect = event.target.getBoundingClientRect();
+  dropdown.style.left = rect.left + 'px';
+  dropdown.style.top  = (rect.bottom + 2) + 'px';
+
+  document.body.appendChild(dropdown);
+  activeDropdown = dropdown;
+
+  // Close on outside click
+  setTimeout(() => document.addEventListener('click', closeEquipDropdown, { once: true }), 0);
+}
+
+function closeEquipDropdown() {
+  if (activeDropdown) { activeDropdown.remove(); activeDropdown = null; }
+}
+
+function equip(slot, item) {
+  // If something already in slot, send it back to inventory first
+  if (state.equipped[slot]) {
+    unequip(slot);
+  }
+  state.equipped[slot] = item;
+  // Remove from inventory
+  const inv = state.inventory.find(i => i.name === item.name);
+  if (inv) {
+    inv.qty -= 1;
+    if (inv.qty <= 0) state.inventory = state.inventory.filter(i => i !== inv);
+  }
+  recalcDerived();
+  updateUI();
+}
+
+function unequip(slot) {
+  const item = state.equipped[slot];
+  if (item) {
+    // Return to inventory
+    const existing = state.inventory.find(i => i.name === item.name);
+    if (existing) {
+      existing.qty += 1;
+    } else {
+      state.inventory.push({ ...item, qty: 1 });
+    }
+  }
+  state.equipped[slot] = null;
+  recalcDerived();
+  updateUI();
+}
+
+function updateEquipUI() {
+  for (const [slot, item] of Object.entries(state.equipped)) {
+    const slotEl = document.querySelector(`.equip-slot[data-slot="${slot}"]`);
+    if (!slotEl) continue;
+    const itemEl = slotEl.querySelector('.equip-slot-item');
+    if (item) {
+      const unmet = item.reqStr && state.str < item.reqStr;
+      itemEl.textContent = item.name;
+      itemEl.className = 'equip-slot-item filled' + (unmet ? ' unmet' : '');
+      itemEl.onclick = (e) => openEquipDropdown(e, slot);
+    } else {
+      const isEmpty = slot === 'Weapon' || slot === 'Shield';
+      itemEl.textContent = isEmpty ? '— none —' : '— bare —';
+      itemEl.className = 'equip-slot-item empty';
+      itemEl.onclick = (e) => openEquipDropdown(e, slot);
+    }
+  }
+}
+
+function updateInventoryUI() {
+  const ib = document.getElementById('inv-body');
+  const equippedNames = new Set(Object.values(state.equipped).filter(Boolean).map(i => i.name));
+  const unequipped = state.inventory.filter(i => !equippedNames.has(i.name) || i.qty > 0);
+  if (unequipped.length === 0) {
+    ib.innerHTML = '<div class="inv-empty">Nothing carried.</div>';
+  } else {
+    ib.innerHTML = '';
+    for (const item of unequipped) {
+      const reqStr = item.reqStr ? `<span class="req">STR ${item.reqStr}</span> ` : '';
+      let statInfo = '';
+      if (item.type === 'Weapon' && item.damage) statInfo = ` DMG ${item.damage}`;
+      if ((item.type.startsWith('Armor') || item.type === 'Shield') && item.defense) statInfo = ` DEF ${item.defense}`;
+      ib.innerHTML += `<div class="inv-item">
+        <span class="inv-name">${item.name}</span>
+        <span class="inv-meta">${reqStr}${item.value}${statInfo}<span class="inv-qty"> ×${item.qty}</span></span>
+      </div>`;
+    }
+  }
+}
+
+function updateCurrencyUI() {
+  document.getElementById('currency-groschen').textContent = state.groschen;
+  document.getElementById('currency-haler').textContent    = state.haler;
+}
+
+function updateKnownLocationsUI() {
+  const body = document.getElementById('known-locations-body');
+  if (!body) return;
+  if (!state.knownLocations || state.knownLocations.length === 0) {
+    body.innerHTML = '';
+    return;
+  }
+
+  // Group by region
+  const groups = {};
+  for (const entry of state.knownLocations) {
+    const region = entry.region || 'Unknown';
+    if (!groups[region]) groups[region] = [];
+    groups[region].push(entry.loc);
+  }
+
+  let html = '';
+  if (state.inCombat) {
+    html += `<div class="known-loc-item" style="color:var(--blood-bright);font-style:italic;cursor:default;font-size:0.78rem;">Fast travel unavailable in combat</div>`;
+  }
+  for (const [region, locs] of Object.entries(groups)) {
+    html += `<div class="known-loc-region">${region}</div>`;
+    for (const loc of locs) {
+      const isCurrent = loc === state.loc;
+      const blocked = state.inCombat && !isCurrent;
+      html += `<div class="known-loc-item ${isCurrent ? 'current' : ''} ${blocked ? 'dimmed' : ''}" ${(!isCurrent && !blocked) ? `onclick="travelTo('${loc.replace(/'/g, "\\'")}')"` : ''}>${loc}</div>`;
+    }
+  }
+  body.innerHTML = html;
+}
+
+function spendSkillPoint(skill) {
+  if (state.skillPoints <= 0 || state.turn !== 0) return;
+  if (!state._baseSkills) state._baseSkills = {...state.skills};
+  state.skills[skill] = (state.skills[skill] ?? 0) + 1;
+  state.skillPoints--;
+  updateUI();
+}
+
+function refundSkillPoint(skill) {
+  if (state.turn !== 0) return;
+  if (!state._baseSkills) state._baseSkills = {...state.skills};
+  const base = state._baseSkills[skill] ?? 0;
+  if ((state.skills[skill] ?? 0) <= base) return;
+  state.skills[skill]--;
+  state.skillPoints++;
+  updateUI();
+}
+
+function travelTo(loc) {
+  const input = document.getElementById('action-input');
+  input.value = `Go to ${loc}.`;
+  submitAction();
+}
+
+function updateUI() {
+  // Stats
+  document.getElementById('stat-str').textContent    = state.str;
+  document.getElementById('stat-qck').textContent    = state.qck;
+  document.getElementById('stat-wit').textContent    = state.wit;
+  document.getElementById('stat-hp').textContent     = state.hp;
+  document.getElementById('stat-damage').textContent = state.damage;
+  document.getElementById('stat-defense').textContent= state.defense;
+  const wEl = document.getElementById('stat-weight');
+  const mw = maxWeight();
+  wEl.textContent = `${state.weight}/${mw}`;
+  wEl.style.color = state.weight > mw ? 'var(--blood-bright)' : '';
+  document.getElementById('hp-bar').style.width      = (state.hp / state.hpMax * 100) + '%';
+  document.getElementById('turn-counter').textContent = 'TURN ' + state.turn;
+
+  // Skills
+  // Skill point banner (new game only)
+  for (const cat of Object.keys(SKILL_CATEGORIES)) {
+    const container = document.getElementById('skills-' + cat);
+    if (container) container.innerHTML = '';
+  }
+  // Show/hide skill points banner
+  let banner = document.getElementById('skillpoints-banner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'skillpoints-banner';
+    banner.style.cssText = 'padding:6px 14px 4px;font-size:0.78rem;color:var(--amber);font-style:italic;border-bottom:1px solid var(--border);';
+    const skillsSection = document.getElementById('skills-combat');
+    if (skillsSection && skillsSection.parentNode) {
+      skillsSection.parentNode.insertBefore(banner, skillsSection);
+    }
+  }
+  if (state.skillPoints > 0 && state.turn === 0) {
+    banner.textContent = `▸ ${state.skillPoints} skill point${state.skillPoints !== 1 ? 's' : ''} remaining`;
+    banner.style.display = '';
+  } else {
+    banner.style.display = 'none';
+  }
+
+  for (const [cat, skills] of Object.entries(SKILL_CATEGORIES)) {
+    const container = document.getElementById('skills-' + cat);
+    container.innerHTML = '';
+    for (const sk of skills) {
+      const val = state.skills[sk] ?? 0;
+      const row = document.createElement('div');
+      row.className = 'skill-row';
+      const showControls = state.turn === 0;
+      const baseVal = state._baseSkills?.[sk] ?? 0;
+      const canMinus = showControls && val > baseVal;
+      const canPlus  = showControls && state.skillPoints > 0;
+      row.innerHTML = `
+        <span class="skill-name${val > 0 ? ' nonzero' : ''}">${sk}</span>
+        <div style="display:flex;align-items:center;gap:4px">
+          ${showControls ? `<button onclick="refundSkillPoint('${sk}')" style="background:none;border:1px solid var(--border-lit);color:${canMinus ? 'var(--amber)' : 'var(--text-dim)'};cursor:${canMinus ? 'pointer' : 'default'};font-size:0.7rem;padding:0 4px;border-radius:2px;line-height:1.4;flex-shrink:0" ${canMinus ? '' : 'disabled'}>−</button>` : ''}
+          ${showControls ? `<button onclick="spendSkillPoint('${sk}')" style="background:none;border:1px solid var(--border-lit);color:${canPlus ? 'var(--amber)' : 'var(--text-dim)'};cursor:${canPlus ? 'pointer' : 'default'};font-size:0.7rem;padding:0 4px;border-radius:2px;line-height:1.4;flex-shrink:0" ${canPlus ? '' : 'disabled'}>+</button>` : ''}
+          <div class="skill-bar"><div class="skill-bar-fill" style="width:${val}%"></div></div>
+          <span class="skill-val${val > 0 ? ' nonzero' : ''}">${val > 0 ? val : '—'}</span>
+        </div>`;
+      container.appendChild(row);
+    }
+  }
+
+  // Standing
+  const sb = document.getElementById('standing-body');
+  if (sb) {
+    sb.innerHTML = Object.keys(state.standing).length ? '' : '<div class="vow-empty" style="padding:4px 14px;font-style:italic;color:var(--text-dim);font-size:0.78rem">No reputation yet.</div>';
+    for (const [faction, val] of Object.entries(state.standing)) {
+      const cls = val > 0 ? 'pos' : val < 0 ? 'neg' : 'neu';
+      const display = val > 0 ? '+' + val : val === 0 ? '—' : val;
+      sb.innerHTML += `<div class="standing-row">
+        <span class="standing-name">${faction}</span>
+        <span class="standing-val ${cls}">${display}</span>
+      </div>`;
+    }
+  }
+
+  const mb = document.getElementById('morale-body');
+  if (mb) {
+    const morale = state.morale || {};
+    mb.innerHTML = Object.keys(morale).length ? '' : '<div class="vow-empty" style="padding:4px 14px;font-style:italic;color:var(--text-dim);font-size:0.78rem">No bonds yet.</div>';
+    for (const [name, val] of Object.entries(morale)) {
+      const cls = val > 0 ? 'pos' : val < 0 ? 'neg' : 'neu';
+      const display = val > 0 ? '+' + val : val === 0 ? '—' : val;
+      mb.innerHTML += `<div class="standing-row">
+        <span class="standing-name">${name}</span>
+        <span class="standing-val ${cls}">${display}</span>
+      </div>`;
+    }
+  }
+
+  // Location
+  document.getElementById('loc-region').textContent = state.region;
+  document.getElementById('loc-loc').textContent    = state.loc;
+  updateKnownLocationsUI();
+
+  // Storage button — only at home
+  const storageBtn = document.getElementById('btn-storage');
+  if (storageBtn) storageBtn.style.display = state.loc === "Werner's Home" ? '' : 'none';
+
+  // Equipment, Inventory, Currency
+  updateEquipUI();
+  updateInventoryUI();
+  updateCurrencyUI();
+
+  // Vows
+  const vb = document.getElementById('vows-body');
+  if (state.vows.length === 0) {
+    vb.innerHTML = '<div class="vow-empty">No vows sworn.</div>';
+  } else {
+    vb.innerHTML = '';
+    for (const vow of state.vows) {
+      vb.innerHTML += `<div class="vow-item">
+        <div class="vow-name">${vow.name}</div>
+        <div class="vow-obj">${vow.obj}</div>
+        <div class="vow-pay">${vow.pay}</div>
+      </div>`;
+    }
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// ARCHIVING
+// ════════════════════════════════════════════════════════════════════════
+
+const ARCHIVIST_PROMPT = `You are the Archivist of Unarmored — keeper of what the active chronicle no longer carries.
+
+Summarize the provided conversation segment into a dense, faithful record. Preserve:
+- All named characters encountered and their disposition toward Nicholas
+- All locations visited
+- All decisions made and their outcomes
+- All items gained or lost
+- All vows sworn or broken
+- Any information learned (debts, alliances, threats, secrets)
+- Skill checks attempted and their results
+
+Write in third person, past tense. Be specific. Omit nothing of consequence. No prose flourish — this is a record, not a story.`;
+
+async function maybeArchive() {
+  // Only archive when we have exactly ARCHIVE_EVERY messages beyond what's already archived
+  const archivedCount = archiveSummaries.length * ARCHIVE_EVERY;
+  const totalArchivable = conversationLog.length - ACTIVE_WINDOW;
+  if (totalArchivable <= archivedCount) return;
+
+  // Grab the next batch of ARCHIVE_EVERY messages to summarize
+  const batchStart = archivedCount;
+  const batchEnd   = batchStart + ARCHIVE_EVERY;
+  const batch      = conversationLog.slice(batchStart, batchEnd);
+  if (batch.length < ARCHIVE_EVERY) return; // not a full batch yet
+
+  const logSegment = batch.map(m => `[${m.role.toUpperCase()}]: ${m.content}`).join('\n\n');
+
+  try {
+    const res = await fetch('/api/archive', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ context: logSegment, system_instruction: ARCHIVIST_PROMPT })
+    });
+    const data = await res.json();
+    if (data.text) {
+      archiveSummaries.push(data.text);
+      // Keep only the last MAX_SUMMARIES
+      if (archiveSummaries.length > MAX_SUMMARIES) {
+        archiveSummaries = archiveSummaries.slice(-MAX_SUMMARIES);
+      }
+      console.log(`📜 Archived batch ${archiveSummaries.length}/${MAX_SUMMARIES}`);
+    }
+  } catch (e) {
+    console.warn('Archive failed silently:', e);
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════
+// FETCH WITH RETRY (up to 4 attempts)
+// ════════════════════════════════════════════════════════════════════════
+
+async function fetchWithRetry(url, options, maxAttempts = 4) {
+  let lastError;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const res = await fetch(url, options);
+      const data = await res.json();
+      if (data.error) {
+        lastError = new Error(data.error);
+        if (attempt < maxAttempts) await delay(500 * attempt);
+        continue;
+      }
+      return data;
+    } catch (e) {
+      lastError = e;
+      if (attempt < maxAttempts) await delay(500 * attempt);
+    }
+  }
+  throw lastError;
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ════════════════════════════════════════════════════════════════════════
+// SUBMIT
+// ════════════════════════════════════════════════════════════════════════
+
+async function submitAction() {
+  if (isThinking) return;
+  const input = document.getElementById('action-input');
+  const action = input.value.trim();
+  if (!action) return;
+
+  input.value = '';
+  state.turn++;
+  isThinking = true;
+
+  document.getElementById('btn-submit').disabled = true;
+  document.getElementById('action-input').disabled = true;
+
+  // Add user message to log only after we get a successful response
+  showTyping();
+
+  try {
+    const context = buildContext();
+    const activeHistory = conversationLog.slice(-ACTIVE_WINDOW);
+    const data = await fetchWithRetry('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system_prompt: SYSTEM_PROMPT,
+        context,
+        player_action: action,
+        history: activeHistory,
+        summaries: archiveSummaries
+      })
+    });
+
+    hideTyping();
+
+    const raw = data.text;
+    const tags = parseTags(raw);
+    applyTags(tags);
+    const prose = stripTags(raw);
+
+    // Only push to log on success so errors don't pollute history
+    conversationLog.push({ role: 'user', content: action });
+    conversationLog.push({ role: 'assistant', content: raw });
+
+    renderEntry(prose, action, tags);
+    updateUI();
+
+    // Archive in background if a new batch is ready
+    maybeArchive();
+  } catch (e) {
+    hideTyping();
+    // Don't add failed exchange to conversationLog
+    state.turn--; // revert turn increment on failure
+    renderEntry('*The chronicle falters. The ink runs dry.*', action, []);
+  }
+
+  isThinking = false;
+  document.getElementById('btn-submit').disabled = false;
+  document.getElementById('action-input').disabled = false;
+  document.getElementById('action-input').focus();
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// VISUALIZE
+// ════════════════════════════════════════════════════════════════════════
+
+async function visualize() {
+  const btn = document.getElementById('btn-visualize');
+  if (btn.disabled) return;
+
+  // Grab last chronicle prose
+  const entries = document.querySelectorAll('.chronicle-prose');
+  if (!entries.length) return;
+  const lastProse = entries[entries.length - 1].textContent.trim();
+
+  btn.disabled = true;
+  showVisualizing();
+
+  try {
+    const res = await fetch('/api/painter', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt: `Bohemia 1403. ${state.region}, ${state.loc}.\n\n${lastProse}`,
+        aspect_ratio: '4:3',
+        narrator_provider: 'gemini'
+      })
+    });
+    const data = await res.json();
+    hideVisualizing();
+    if (data.success && data.image_base64) {
+      renderImage(data.image_base64);
+    } else {
+      renderEntry('*The painter finds no image in this moment.*', null, []);
+    }
+  } catch (e) {
+    hideVisualizing();
+    renderEntry('*The painter finds no image in this moment.*', null, []);
+  }
+
+  btn.disabled = false;
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// SAVE / LOAD
+// ════════════════════════════════════════════════════════════════════════
+
+function saveGame() {
+  const save = { state, conversationLog, archiveSummaries };
+  const blob = new Blob([JSON.stringify(save, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `unarmored_turn${state.turn}.json`;
+  a.click();
+}
+
+function loadGame() {
+  document.getElementById('file-load').click();
+}
+
+function loadFromFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const save = JSON.parse(e.target.result);
+      state = save.state;
+      conversationLog = save.conversationLog || [];
+      archiveSummaries = save.archiveSummaries || [];
+      if (!state.standing) state.standing = {};
+      if (!state.morale) state.morale = {};
+      if (!state.equipped) state.equipped = { Head:null,Neck:null,Chest:null,Arms:null,Hands:null,Belt:null,Legs:null,Feet:null,Weapon:null,Shield:null };
+      if (state.groschen == null) state.groschen = 0;
+      if (state.haler    == null) state.haler    = 0;
+      if (state.damage   == null) state.damage   = 0;
+      if (state.defense  == null) state.defense  = 0;
+      if (!state.knownLocations) state.knownLocations = [{ region: state.region, loc: state.loc }];
+      if (!state.storage) state.storage = [];
+      // Migrate old flat string format to object format
+      if (state.knownLocations.length > 0 && typeof state.knownLocations[0] === 'string') {
+        state.knownLocations = state.knownLocations.map(loc => ({ region: state.region, loc }));
+      }
+      recalcDerived();
+
+      // Rebuild chronicle from log
+      document.getElementById('chronicle').innerHTML = '';
+      for (let i = 0; i < conversationLog.length; i++) {
+        const msg = conversationLog[i];
+        if (msg.role === 'assistant') {
+          const prev = conversationLog[i - 1];
+          const action = prev?.role === 'user' ? prev.content : null;
+          const tags = parseTags(msg.content);
+          const prose = stripTags(msg.content);
+          renderEntry(prose, action, tags);
+        }
+      }
+
+      updateUI();
+    } catch (err) {
+      alert('Failed to load save: ' + err.message);
+    }
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// AUDIO
+// ════════════════════════════════════════════════════════════════════════
+
+const AMBIENT_IDS = ['amb-1','amb-2','amb-3','amb-4'];
+const BATTLE_IDS  = ['btl-1','btl-2','btl-3','btl-4'];
+
+let isMusicOn    = false;
+let isInCombatAudio = false;
+let ambientIdx   = 0;
+let battleIdx    = 0;
+let activeAmbient = null;
+let activeBattle  = null;
+let musicVol      = 0.25;
+
+// Pre-set volumes
+[...AMBIENT_IDS, ...BATTLE_IDS].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.volume = musicVol;
+});
+
+// When an ambient track ends, advance to next
+AMBIENT_IDS.forEach((id, i) => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('ended', () => {
+    if (isMusicOn && !isInCombatAudio) {
+      ambientIdx = (ambientIdx + 1) % AMBIENT_IDS.length;
+      playAmbient();
+    }
+  });
+});
+
+BATTLE_IDS.forEach((id, i) => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('ended', () => {
+    if (isMusicOn && isInCombatAudio) {
+      battleIdx = (battleIdx + 1) % BATTLE_IDS.length;
+      playBattle();
+    }
+  });
+});
+
+function playAmbient() {
+  if (activeAmbient) { activeAmbient.pause(); activeAmbient.currentTime = 0; }
+  activeAmbient = document.getElementById(AMBIENT_IDS[ambientIdx]);
+  if (activeAmbient && isMusicOn) activeAmbient.play().catch(() => {});
+}
+
+function playBattle() {
+  if (activeBattle) { activeBattle.pause(); activeBattle.currentTime = 0; }
+  activeBattle = document.getElementById(BATTLE_IDS[battleIdx]);
+  if (activeBattle && isMusicOn) { activeBattle.currentTime = 0; activeBattle.play().catch(() => {}); }
+}
+
+function setCombatMusic(inCombat) {
+  if (isInCombatAudio === inCombat) return;
+  isInCombatAudio = inCombat;
+  if (!isMusicOn) return;
+  if (inCombat) {
+    if (activeAmbient) activeAmbient.pause();
+    battleIdx = (battleIdx + 1) % BATTLE_IDS.length;
+    playBattle();
+  } else {
+    if (activeBattle) { activeBattle.pause(); activeBattle.currentTime = 0; }
+    ambientIdx = (ambientIdx + 1) % AMBIENT_IDS.length;
+    playAmbient();
+  }
+}
+
+function skipTrack() {
+  if (!isMusicOn) return;
+  if (isInCombatAudio) {
+    if (activeBattle) { activeBattle.pause(); activeBattle.currentTime = 0; }
+    battleIdx = (battleIdx + 1) % BATTLE_IDS.length;
+    playBattle();
+  } else {
+    if (activeAmbient) { activeAmbient.pause(); activeAmbient.currentTime = 0; }
+    ambientIdx = (ambientIdx + 1) % AMBIENT_IDS.length;
+    playAmbient();
+  }
+}
+
+function updateSkipButton() {
+  const btn = document.getElementById('btn-skip');
+  if (!btn) return;
+  if (isMusicOn) btn.classList.add('visible');
+  else btn.classList.remove('visible');
+}
+
+function toggleMusic() {
+  isMusicOn = !isMusicOn;
+  const btn = document.getElementById('btn-music');
+  if (isMusicOn) {
+    btn.innerHTML = "Music: <span style='color:var(--amber)'>On</span>";
+    if (isInCombatAudio) playBattle();
+    else playAmbient();
+  } else {
+    btn.textContent = 'Music: Off';
+    if (activeAmbient) activeAmbient.pause();
+    if (activeBattle)  activeBattle.pause();
+  }
+  updateSkipButton();
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// TTS
+// ════════════════════════════════════════════════════════════════════════
+
+let isTTSOn = false;
+
+function toggleTTS() {
+  isTTSOn = !isTTSOn;
+  const btn = document.getElementById('btn-tts');
+  if (isTTSOn) {
+    btn.innerHTML = "Voice: <span style='color:var(--amber)'>On</span>";
+  } else {
+    btn.textContent = 'Voice: Off';
+    window.speechSynthesis.cancel();
+  }
+}
+
+function speakChronicle(text) {
+  if (!isTTSOn || !text) return;
+  window.speechSynthesis.cancel();
+  const clean = text
+    .replace(/\[.*?\]/gi, '')
+    .replace(/[*_`#]/g, '')
+    .replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, '&')
+    .trim();
+  if (!clean) return;
+  const utterance = new SpeechSynthesisUtterance(clean);
+  utterance.rate  = 0.98;
+  utterance.pitch = 0.72;
+  // Prefer a deep English male voice
+  const voices = window.speechSynthesis.getVoices();
+  const preferred = voices.find(v => v.name.includes('Google UK English Male'))
+    || voices.find(v => v.name.toLowerCase().includes('male'))
+    || voices[0];
+  if (preferred) utterance.voice = preferred;
+  window.speechSynthesis.speak(utterance);
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// DEATH
+// ════════════════════════════════════════════════════════════════════════
+
+function triggerDeath() {
+  window.speechSynthesis.cancel();
+  if (activeAmbient) activeAmbient.pause();
+  if (activeBattle)  activeBattle.pause();
+  const screen = document.getElementById('void-screen');
+  screen.style.display = 'flex';
+  setTimeout(() => screen.style.opacity = '1', 100);
+}
+
+function restartGame() {
+  // Clear autosave and reload page for a clean slate
+  localStorage.removeItem('unarmored_autosave');
+  location.reload();
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// INPUT — ENTER KEY
+// ════════════════════════════════════════════════════════════════════════
+
+document.getElementById('action-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    submitAction();
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════
+// OPENING
+// ════════════════════════════════════════════════════════════════════════
+
+const OPENING = `The tannery smells even with the fire out. It is the kind of smell that gets into wood, into stone, into a man's hair and skin until he stops noticing it. Werner stopped noticing it years ago.
+
+His father's workbench runs the length of the back wall. The riding leathers are laid out on it — cut, trimmed, punched for the laces, ready to be assembled. Three weeks of his father's work, maybe four. Stopped in the middle of a seam when the sweat took him.
+
+The commission notice is pinned beneath the corner of the hide. Werner has read it twice. The steward's hand is clear enough: the leathers finished and delivered, or the value of the commission in silver. Eight groschen. His father's mark is at the bottom — a careful X, the kind a man makes when he knows what signing means even if he cannot write his name.
+
+Outside, a cart moves through the village. Two men riding, road-worn, wearing the colors of a duke Werner doesn't recognize. They don't stop. That has been happening more lately — men moving through Hartburg without stopping, heading somewhere with purpose or away from somewhere with urgency. The duchy's business, conducted over Werner's head.
+
+The tools are on the bench. The hide is on the bench. Werner knows how to do this work.
+
+He has not yet begun.`;
+
+// Show opening scene
+state._baseSkills = {...state.skills};
+recalcDerived();
+renderEntry(OPENING, null, []);
+updateUI();
+</script>
+</body>
+</html>
