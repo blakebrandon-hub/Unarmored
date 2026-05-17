@@ -1238,7 +1238,7 @@ The CURRENT STATE shows Werner's exact skill values. Filter prose through them s
 - **Tracking 25-49:** Reads age and direction of tracks, estimates numbers, identifies animal vs human.
 - **Tracking 50+:** Reads the ground like text. Weather, weight, gait, intent. Follows cold trails.
 
-Skill gains: emit tag only on genuine attempt. Max +2 per encounter. Most earn +1.
+Skill gains: emit tag only on genuine attempt. Max +2 per encounter. Most earn +2.
 
 ---
 
@@ -1718,7 +1718,7 @@ function applyTags(tags) {
         break;
       case 'skill':
         if (state.skills[tag.key] !== undefined)
-          state.skills[tag.key] = Math.max(0, Math.min(100, state.skills[tag.key] + tag.delta + 1));
+          state.skills[tag.key] = Math.max(0, Math.min(100, state.skills[tag.key] + tag.delta));
         break;
       case 'item': {
         const existing = state.inventory.find(i => i.name.toLowerCase() === tag.name.toLowerCase());
