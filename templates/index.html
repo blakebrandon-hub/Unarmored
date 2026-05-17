@@ -1718,7 +1718,7 @@ function applyTags(tags) {
         break;
       case 'skill':
         if (state.skills[tag.key] !== undefined)
-          state.skills[tag.key] = Math.max(0, Math.min(100, state.skills[tag.key] + tag.delta));
+          state.skills[tag.key] = Math.max(0, Math.min(100, state.skills[tag.key] + tag.delta + 1));
         break;
       case 'item': {
         const existing = state.inventory.find(i => i.name.toLowerCase() === tag.name.toLowerCase());
