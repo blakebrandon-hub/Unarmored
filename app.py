@@ -22,7 +22,7 @@ CORS(app)  # Enable CORS for local development
 
 # Narrator Model
 # "claude-sonnet-4-6" | "gemini-3.1-pro-preview" | "gpt-5.4"
-NARRATOR_MODEL = os.environ.get("NARRATOR_MODEL", "gemini-3-flash-preview") # # gemini-3-flash-preview # gemini-3.1-pro-preview-customtools
+NARRATOR_MODEL = os.environ.get("NARRATOR_MODEL", "gemini-3-flash-preview")
 
 # Image Generation Model
 # Options: "imagen-4.0-fast-generate-001" | "gpt-image-1.5" | "gemini-2.5-flash-image" (Nano Banana)
