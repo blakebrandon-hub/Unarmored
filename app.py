@@ -109,38 +109,6 @@ def handle_sonnet(system_prompt, context, player_action, history=[], summaries=[
 
     return response.content[0].text
 
-# Better version with caching
-"""def handle_gemini(system_prompt, context, player_action):
-    # 1. Create the Cache
-    cache = gemini_client.caches.create(
-        model=NARRATOR_MODEL,
-        config=types.CreateCachedContentConfig(
-            display_name="neon_bazaar_logic",
-            system_instruction=system_prompt,
-            ttl="300s",
-        )
-    )
-    
-    # 2. Optimized Generation Config
-    config = types.GenerateContentConfig(
-        cached_content=cache.name,
-        thinking_config=types.ThinkingConfig(thinking_level="low"),
-        temperature=1.0, 
-        max_output_tokens=8000, 
-    )
-    
-    # 3. Generate
-    response = gemini_client.models.generate_content(
-        model=NARRATOR_MODEL,
-        contents=[
-            types.Part.from_text(text=f"### CURRENT_STATE ###\n{context}"),
-            types.Part.from_text(text=f"### USER_INPUT ###\n{player_action}")
-        ],
-        config=config
-    )
-    
-    return response.text"""
-
 def handle_gemini(system_prompt, context, player_action, history=[], summaries=[]):
     summary_block = ""
     if summaries:
