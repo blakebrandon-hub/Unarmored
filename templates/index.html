@@ -1118,7 +1118,7 @@ let state = {
   damage: 0,
   defense: 0,
   weight: 0,
-  groschen: 0,
+  groschen: 8,
   haler: 0,
   skills: {
     'Swordsmanship':0,'Mace Fighting':0,'Fencing':0,'Wrestling':4,
@@ -1135,17 +1135,16 @@ let state = {
   inventory: [
     { name: "Tanning Knife",      type: "Weapon",   reqStr: 8,    damage: 3, defense: 0, value: "2g",  qty: 1, weight: 1 },
     { name: "Father's Tools",     type: "Tool",     reqStr: null, damage: 0, defense: 0, value: "6g",  qty: 1, weight: 4 },
-    { name: "Unfinished Leathers",type: "Misc",     reqStr: null, damage: 0, defense: 0, value: "1h",  qty: 1, weight: 3 },
     { name: "Cured Leather",      type: "Misc",     reqStr: null, damage: 0, defense: 0, value: "1g",  qty: 2, weight: 2 },
-    { name: "Commission Notice",  type: "Document", reqStr: null, damage: 0, defense: 0, value: "1h",  qty: 1, weight: 0 },
   ],
-  vows: [
+  vows: [],
+  completedVows: [
     { name: "Dietmar's Commission", obj: "Finish and deliver the riding leathers to Lord Dietmar's steward", pay: "8 Groschen, debt cleared" }
   ],
   active_vow: "",
   standing: {
     'Hartburg': 2,
-    'Dietmar': -1,
+    'Dietmar': 1,
     'Breslau': 0,
     "Tanner's Guild": 0,
     'The Church': 0,
@@ -1561,6 +1560,10 @@ function buildContext() {
     ? state.vows.map(v => `${v.name}: ${v.obj} | Pay: ${v.pay}`).join('\n')
     : 'None';
 
+  const completedVowLines = (state.completedVows || []).length
+    ? state.completedVows.map(v => `${v.name} (completed)`).join('\n')
+    : 'None';
+
   const storageLines = (state.storage || []).length
     ? state.storage.map(i => `${i.name} | ${i.type} | x${i.qty}`).join('\n')
     : 'Empty';
@@ -1590,6 +1593,9 @@ ${storageLines}
 
 VOWS
 ${vowLines}
+
+COMPLETED VOWS
+${completedVowLines}
 
 STANDING
 ${standingLines}
@@ -1797,7 +1803,13 @@ function applyTags(tags) {
           state.vows.push({ name: tag.name, obj: tag.obj, pay: tag.pay });
         break;
       case 'vow_end': {
+        const finished = state.vows.find(v => v.name === tag.name);
         state.vows = state.vows.filter(v => v.name !== tag.name);
+        if (finished) {
+          if (!state.completedVows) state.completedVows = [];
+          if (!state.completedVows.find(v => v.name === finished.name))
+            state.completedVows.push(finished);
+        }
         break;
       }
     }
@@ -2400,7 +2412,7 @@ function craftRecipe(id, tab) {
   const gainChance = craftSkillGainChance(recipe);
   const didGain = Math.random() * 100 < gainChance;
   if (didGain && state.skills[recipe.skill] !== undefined) {
-    state.skills[recipe.skill] = Math.min(100, (state.skills[recipe.skill] || 0) + 2);
+    state.skills[recipe.skill] = Math.min(100, (state.skills[recipe.skill] || 0) + 1);
   }
 
   // Fail check
@@ -2412,7 +2424,7 @@ function craftRecipe(id, tab) {
     updateUI();
     renderCraftTab(tab);
     renderEntry(`*The work comes apart. Werner's hands know what went wrong before his mind does. The materials are spent.*`, null, []);
-    const failSkillTag = { type: 'skill', key: recipe.skill, delta: 2, raw: `[${recipe.skill}: +2]` };
+    const failSkillTag = { type: 'skill', key: recipe.skill, delta: 1, raw: `[${recipe.skill}: +1]` };
     renderEntry('', null, [failSkillTag]);
     return;
   }
@@ -2461,7 +2473,7 @@ function useRecipe(id, tab) {
   const useGainChance = craftSkillGainChance(recipe);
   const useDidGain = Math.random() * 100 < useGainChance;
   if (useDidGain && state.skills[recipe.skill] !== undefined) {
-    state.skills[recipe.skill] = Math.min(100, (state.skills[recipe.skill] || 0) + 2);
+    state.skills[recipe.skill] = Math.min(100, (state.skills[recipe.skill] || 0) + 1);
   }
 
   // Fail check
@@ -2677,8 +2689,8 @@ function forage() {
   const herbGainChance = Math.max(5, 100 - herbalism * 2);
   const herbDidGain = success && Math.random() * 100 < herbGainChance;
   if (herbDidGain) {
-    state.skills['Herbalism'] = Math.min(100, herbalism + 2);
-    tags.push({ type: 'skill', key: 'Herbalism', delta: 2, raw: '[Herbalism: +2]' });
+    state.skills['Herbalism'] = Math.min(100, herbalism + 1);
+    tags.push({ type: 'skill', key: 'Herbalism', delta: 1, raw: '[Herbalism: +1]' });
   }
 
   forageCount++;
@@ -3137,15 +3149,21 @@ function updateUI() {
 
   // Vows
   const vb = document.getElementById('vows-body');
-  if (state.vows.length === 0) {
+  vb.innerHTML = '';
+  if (state.vows.length === 0 && !(state.completedVows || []).length) {
     vb.innerHTML = '<div class="vow-empty">No vows sworn.</div>';
   } else {
-    vb.innerHTML = '';
     for (const vow of state.vows) {
       vb.innerHTML += `<div class="vow-item">
         <div class="vow-name">${vow.name}</div>
         <div class="vow-obj">${vow.obj}</div>
         <div class="vow-pay">${vow.pay}</div>
+      </div>`;
+    }
+    for (const vow of (state.completedVows || [])) {
+      vb.innerHTML += `<div class="vow-item" style="opacity:0.45">
+        <div class="vow-name" style="text-decoration:line-through">${vow.name}</div>
+        <div class="vow-pay" style="color:var(--amber-dim)">◈ Fulfilled</div>
       </div>`;
     }
   }
@@ -3370,6 +3388,7 @@ function loadFromFile(event) {
       if (state.defense  == null) state.defense  = 0;
       if (!state.knownLocations) state.knownLocations = [{ region: state.region, loc: state.loc }];
       if (!state.storage) state.storage = [];
+      if (!state.completedVows) state.completedVows = [];
       // Migrate old flat string format to object format
       if (state.knownLocations.length > 0 && typeof state.knownLocations[0] === 'string') {
         state.knownLocations = state.knownLocations.map(loc => ({ region: state.region, loc }));
