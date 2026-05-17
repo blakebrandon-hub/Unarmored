@@ -1142,6 +1142,7 @@ let state = {
   vows: [
     { name: "Dietmar's Commission", obj: "Finish and deliver the riding leathers to Lord Dietmar's steward", pay: "8 Groschen, debt cleared" }
   ],
+  completedVows: [],
   active_vow: "",
   standing: {
     'Hartburg': 2,
@@ -1591,6 +1592,9 @@ ${storageLines}
 VOWS
 ${vowLines}
 
+COMPLETED VOWS
+${(state.completedVows||[]).map(v=>v.name).join(', ')||'None'}
+
 STANDING
 ${standingLines}
 
@@ -1797,7 +1801,12 @@ function applyTags(tags) {
           state.vows.push({ name: tag.name, obj: tag.obj, pay: tag.pay });
         break;
       case 'vow_end': {
+        const finished = state.vows.find(v => v.name === tag.name);
         state.vows = state.vows.filter(v => v.name !== tag.name);
+        if (finished) {
+          if (!state.completedVows) state.completedVows = [];
+          state.completedVows.push(finished);
+        }
         break;
       }
     }
@@ -3373,6 +3382,7 @@ function loadFromFile(event) {
       if (state.defense  == null) state.defense  = 0;
       if (!state.knownLocations) state.knownLocations = [{ region: state.region, loc: state.loc }];
       if (!state.storage) state.storage = [];
+      if (!state.completedVows) state.completedVows = [];
       // Migrate old flat string format to object format
       if (state.knownLocations.length > 0 && typeof state.knownLocations[0] === 'string') {
         state.knownLocations = state.knownLocations.map(loc => ({ region: state.region, loc }));
