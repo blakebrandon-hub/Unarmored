@@ -849,7 +849,7 @@ def context_view_raw():
 
 if __name__ == "__main__":
     print("\n" + "="*80)
-    print("🎮 UNIFIED GAME BACKEND")
+    print("🎮 MULTI-PROVIDER GAME BACKEND")
     print("="*80)
     print(f"📖 Narrator: {NARRATOR_MODEL} ({NARRATOR_PROVIDER})")
     print(f"🎨 Image Model: {IMAGE_MODEL} ({IMAGE_PROVIDER})")
