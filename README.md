@@ -4,7 +4,6 @@
 A grounded medieval RPG powered by a large language model narrator. You play Werner, the son of a tanner in Hartburg village, Silesia. Your father died in April — owing guild dues and an unfinished commission to Lord Dietmar's steward. You inherited the tools, the hide, and the debt.
 
 <img width="1366" height="768" alt="Screenshot 2026-07-29 191942" src="https://github.com/user-attachments/assets/d542be18-9a67-4b23-8aa8-8412347f092a" />
-" />
 
 ---
 
