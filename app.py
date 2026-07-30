@@ -73,9 +73,7 @@ IMAGE_PROVIDER = get_provider(IMAGE_MODEL)
 # ─────────────────────────────────────────────────────────────────────────────
 # INPUT LIMITS
 # ─────────────────────────────────────────────────────────────────────────────
-# Every one of these is tunable via env var so you can loosen or tighten
-# without a redeploy. The numbers below are starting points — watch your
-# logs for legitimate players hitting them and adjust.
+
 
 def _int_env(name, default):
     try:
@@ -83,11 +81,8 @@ def _int_env(name, default):
     except (TypeError, ValueError):
         return default
 
-# The player's typed action. This is the one the UI should mirror.
 MAX_ACTION_CHARS     = _int_env("MAX_ACTION_CHARS", 750)
 
-# Everything else the client POSTs. These are the fields that actually
-# cost you money if left unbounded.
 MAX_SYSTEM_CHARS     = _int_env("MAX_SYSTEM_CHARS", 40000)
 MAX_CONTEXT_CHARS    = _int_env("MAX_CONTEXT_CHARS", 20000)
 MAX_HISTORY_MESSAGES = _int_env("MAX_HISTORY_MESSAGES", 40)
@@ -98,13 +93,9 @@ MAX_ARCHIVE_CHARS    = _int_env("MAX_ARCHIVE_CHARS", 60000)
 MAX_PAINTER_CHARS    = _int_env("MAX_PAINTER_CHARS", 8000)
 MAX_STORED_CONTEXT   = _int_env("MAX_STORED_CONTEXT", 200000)
 
-# Rate limiting: requests per window, per client.
 RATE_LIMIT_REQUESTS  = _int_env("RATE_LIMIT_REQUESTS", 20)
 RATE_LIMIT_WINDOW    = _int_env("RATE_LIMIT_WINDOW", 60)
 
-# Only trust X-Forwarded-For when you are actually behind a proxy you
-# control. Otherwise a client can forge the header and get a fresh rate
-# limit bucket on every request.
 TRUST_PROXY = os.environ.get("TRUST_PROXY", "").lower() in ("1", "true", "yes")
 
 
@@ -187,9 +178,6 @@ def _json_body():
 # ─────────────────────────────────────────────
 # RATE LIMITING (in-process, no dependencies)
 # ─────────────────────────────────────────────
-# A sliding window per client. Good enough for a single Flask process.
-# If you scale to multiple workers, swap this for flask-limiter backed
-# by Redis — separate processes do not share these buckets.
 
 _rate_lock = threading.Lock()
 _rate_buckets = defaultdict(deque)
@@ -213,8 +201,6 @@ def _check_rate_limit(limit=None, window=None):
     now = time.monotonic()
 
     with _rate_lock:
-        # Drop buckets nobody has touched in a while, so the dict itself
-        # cannot be grown without bound by rotating source addresses.
         if now - _rate_last_prune > window:
             for k in [k for k, b in _rate_buckets.items() if not b or now - b[-1] > window]:
                 del _rate_buckets[k]
