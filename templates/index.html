@@ -981,6 +981,7 @@ header {
       <button class="craft-tab" onclick="switchCraftTab(event,'blacksmith')">Blacksmith</button>
       <button class="craft-tab" onclick="switchCraftTab(event,'bowcraft')">Bowcraft</button>
       <button class="craft-tab" onclick="switchCraftTab(event,'alchemy')">Alchemy</button>
+      <button class="craft-tab" onclick="switchCraftTab(event,'forage')">Forage</button>
     </div>
     <div class="craft-body" id="craft-body"></div>
   </div>
@@ -995,6 +996,7 @@ header {
 <audio id="btl-2" src="battle2.mp3"  loop preload="auto"></audio>
 <audio id="btl-3" src="battle3.mp3"  loop preload="auto"></audio>
 <audio id="btl-4" src="battle4.mp3"  loop preload="auto"></audio>
+<audio id="sfx-craft" src="craft.mp3" preload="auto"></audio>
 
 <!-- ── DEATH SCREEN ── -->
 <div id="void-screen">
@@ -1015,8 +1017,31 @@ header {
 
 const SKILL_CATEGORIES = {
   combat:    ['Swordsmanship','Mace Fighting','Fencing','Wrestling','Archery','Parrying'],
-  knowledge: ['Reading','Herbalism','Tracking','Riding','Stealth'],
+  knowledge: ['Reading','Herbalism','Riding','Stealth'],
   craft:     ['Alchemy','Blacksmithy','Bowcraft','Leathercraft','Mining','Fishing'],
+};
+
+// Single source of truth for the two ledgers. state seeds itself from these,
+// and incoming tags are snapped to these keys, so the prompt no longer has to
+// police spelling. Note Hesso was previously missing from the seeded morale
+// while the prompt listed him as valid.
+const CANONICAL_FACTIONS = {
+  'Hartburg': 2,
+  'Dietmar': -1,
+  'Breslau': 0,
+  "Tanner's Guild": 0,
+  'The Church': 0,
+  'The Road': 0,
+};
+const CANONICAL_PEOPLE = {
+  'Oswin': 0,
+  'Ilse': 0,
+  'Greta': 0,
+  'Konrad': 0,
+  'Dietrich': 0,
+  'Vogel': 0,
+  'Emmerich': 0,
+  'Hesso': 0,
 };
 
 let state = {
@@ -1031,7 +1056,7 @@ let state = {
   skills: {
     'Swordsmanship':0,'Mace Fighting':0,'Fencing':0,'Wrestling':4,
     'Archery':8,'Parrying':0,'Riding':0,
-    'Reading':8,'Alchemy':0,'Herbalism':0,'Tracking':12,
+    'Reading':8,'Alchemy':0,'Herbalism':0,
     'Stealth':0,
     'Blacksmithy':0,'Bowcraft':12,'Fishing':0,
     'Leathercraft':28,'Mining':0,
@@ -1041,10 +1066,10 @@ let state = {
     Belt: null, Legs: null, Feet: null, Weapon: null, Shield: null,
   },
   inventory: [
-    { name: "Tanning Knife",      type: "Weapon",   reqStr: 8,    damage: 3, defense: 0, value: "2g",  qty: 1, weight: 1 },
-    { name: "Short Bow",          type: "Weapon",   reqStr: 8,    damage: 5, defense: 0, value: "6g",  qty: 1, weight: 2 },
+    { name: "Tanning Knife",      type: "Weapon",   reqStr: 8,    damage: 3, defense: 0, value: "2g",  qty: 1, weight: 2 },
+    { name: "Short Bow",          type: "Weapon",   reqStr: 8,    damage: 5, defense: 0, value: "6g",  qty: 1, weight: 4 },
     { name: "Arrow",              type: "Misc",     reqStr: null, damage: 0, defense: 0, value: "1g",  qty: 6, weight: 0 },
-    { name: "Father's Tools",     type: "Tool",     reqStr: null, damage: 0, defense: 0, value: "6g",  qty: 1, weight: 4 },
+    { name: "Father's Tools",     type: "Tool",     reqStr: null, damage: 0, defense: 0, value: "6g",  qty: 1, weight: 6 },
     { name: "Unfinished Leathers",type: "Misc",     reqStr: null, damage: 0, defense: 0, value: "1h",  qty: 1, weight: 3 },
     { name: "Cured Leather",      type: "Misc",     reqStr: null, damage: 0, defense: 0, value: "1g",  qty: 2, weight: 2 },
     { name: "Commission Notice",  type: "Document", reqStr: null, damage: 0, defense: 0, value: "1h",  qty: 1, weight: 0 },
@@ -1054,23 +1079,8 @@ let state = {
   ],
   completedVows: [],
   active_vow: "",
-  standing: {
-    'Hartburg': 2,
-    'Dietmar': -1,
-    'Breslau': 0,
-    "Tanner's Guild": 0,
-    'The Church': 0,
-    'The Road': 0,
-  },
-  morale: {
-    'Oswin': 0,
-    'Ilse': 0,
-    'Greta': 0,
-    'Konrad': 0,
-    'Dietrich': 0,
-    'Vogel': 0,
-    'Emmerich': 0,
-  },
+  standing: { ...CANONICAL_FACTIONS },
+  morale:   { ...CANONICAL_PEOPLE },
   region: 'Silesia',
   loc: "Werner's Home",
   knownLocations: [
@@ -1088,10 +1098,14 @@ let state = {
     { region: 'Breslau',  loc: 'Breslau Guild Hall' },
   ],
   inCombat: false,
+  turnsSinceEncounter: 0,
   skillPoints: 25,
 };
 
 let conversationLog = [];
+let archivedMessages = 0;    // messages already summarized; NOT derived from
+                             // archiveSummaries.length, which is capped at
+                             // MAX_SUMMARIES and would freeze the batch cursor
 let archiveSummaries = [];   // up to 4 summaries, oldest first
 let isThinking = false;
 
@@ -1103,338 +1117,491 @@ const MAX_SUMMARIES   = 4;   // rolling window of summaries
 // SYSTEM PROMPT
 // ════════════════════════════════════════════════════════════════════════
 
-const SYSTEM_PROMPT = `# UNARMORED — Silesia, 1325
+const SYSTEM_PROMPT =`# UNARMORED — Silesia, 1325
 
 ## ROLE
-You are the Chronicler of Unarmored — a grounded medieval RPG. You narrate Werner's story in third person, past tense, prose only. You never speak as Werner, never give options, never break character.
+You are the Chronicler of Unarmored — a grounded medieval RPG. You narrate Werner's story in third person, past tense, prose only. You never give options, never break character, never address the player.
 
 - Third person only: "Werner does." Never "you do."
-- Werner's speech in double quotes: "Like this."
+- You may report Werner's speech in double quotes: "Like this."
+- You do not invent Werner's intentions, emotions, or decisions. Only narrate what is observable.
 - No inner thoughts. Describe actions and observations only.
 - Filter everything through Werner's actual skill values. Never announce the number.
 - Be specific, tactile, unglamorous. Leather, mud, debt, iron.
 
-**Output 75 words maximum.**
+**Output 150 words maximum.**
 
+## WORLD RULE
+CURRENT STATE is the only source of truth. Narrative follows state; narrative never changes state.
+
+## ACTION RULE
+Actions are attempts, not outcomes. The world decides whether they succeed.
+Failed, interrupted, or impossible actions leave the world unchanged unless a consequence is explicitly established.
 ---
 
 ## WERNER
-Son of a tanner, Hartburg village, Silesia. Father died in April owing guild dues and a commission debt to Lord Dietmar's steward — riding leathers, cut but unassembled. Werner inherited the tools, the hide, and the obligation. He can read, which is unusual. He knows leather, which is useful. He knows nothing of fighting, which is dangerous.
+Son of a tanner, Hartburg village, Silesia. Father died in April owing guild dues and a commission debt to Lord Dietmar's steward — riding leathers, cut but unassembled. Werner inherited the tools, the hide, and the obligation.
+
+He knows leather, which is useful. He cannot read, which is ordinary and which is about to cost him. He knows nothing of fighting, which is dangerous.
 
 ---
 
 ## SKILLS — READ BEFORE EVERY RESPONSE
-The CURRENT STATE shows Werner's exact skill values. Filter prose through them silently.
+CURRENT STATE shows Werner's exact skill values. Filter prose through them silently.
 
-- **Leathercraft 0-13:** Crude work, visible errors, wasted material.
-- **Leathercraft 14-29:** Competent journeyman. Clean cuts, serviceable seams.
-- **Leathercraft 30-59:** Fitted, articulated, professional.
-- **Leathercraft 60+:** Armor-grade. Waxed, sealed, masterwork possible.
-- **Reading 0-9:** Documents are shapes, wax, texture. Cannot read.
-- **Reading 10-29:** Slow, finger-tracing. Simple words only.
-- **Reading 30-59:** Reads with ease, notices details.
-- **Reading 60+:** Latin, forgeries, legal language.
-- **Swordsmanship 0:** Swings wide, unguarded, exhausting. No technique.
-- **Swordsmanship 20+:** Finds the geometry. Basic guards.
-- **Swordsmanship 50+:** German fencing terms appear in narration.
-- **Herbalism 0-9:** Forest is trees. No plant knowledge.
-- **Herbalism 10+:** Names what grows at the roadside.
-- **Tracking 0-9:** Notices nothing useful. A broken branch is just a broken branch.
-- **Tracking 10-24:** Obvious signs only — fresh footprints, trampled grass, blood on leaves.
-- **Tracking 25-49:** Reads age and direction of tracks, estimates numbers, identifies animal vs human.
-- **Tracking 50+:** Reads the ground like text. Weather, weight, gait, intent. Follows cold trails.
+**Leathercraft**
+- 0-13: Crude work, visible errors, wasted material.
+- 14-29: Competent journeyman. Clean cuts, serviceable seams.
+- 30-59: Fitted, articulated, professional.
+- 60+: Armor-grade. Waxed, sealed, masterwork possible.
 
-Skill gains: emit tag only on genuine attempt. Max +2 per encounter. Most earn +2.
+**Reading**
+- 0-9: Documents are shapes, wax, texture. Cannot read.
+- 10-29: Slow, finger-tracing. Simple words only.
+- 30-59: Reads with ease, notices details.
+- 60+: Latin, forgeries, legal language.
 
----
+**Swordsmanship**
+- 0-9: Swings wide, unguarded, exhausting. No technique.
+- 10-19: Holds the weapon correctly. Tires slower. Still loses.
+- 20-49: Finds the geometry. Basic guards.
+- 50+: German fencing terms appear in narration.
 
-## COMBAT
-Werner's stats determine outcomes — not player intent. Strength = damage weight. Quickness = who acts first. Describe the wound specifically before emitting HP loss. Emit [Combat: Start/End] when violence begins or resolves.
+**Wrestling**
+- 0-9: Grabs and shoves. Wild, upright, easily thrown.
+- 10-24: Gets low, uses his weight. Beats untrained men his own size.
+- 25-49: Throws, joint control, disarms. Ringen proper.
+- 50+: Takes weapons off armed men. Kampfringen terms appear.
 
-A vague action earns a precise punishment. "I attack him" is not a plan. The narrator responds to what Werner actually does with his body, not what he intends.
+**Archery**
+- 0-9: Has held a bow. Draws with the arms, not the back. Shakes at full draw. Hits a still target at short distance, sometimes.
+- 10-29: Consistent on stationary targets at short range. Moving game escapes.
+- 30-49: Reliable at moderate range. Kills game cleanly at thirty paces.
+- 50+: Leads moving targets, judges wind, shoots under pressure.
 
-German guards (only when skill permits): Vom Tag, Pflug, Ochs, Alber, Zornhau, Mordschlag.
+**Herbalism**
+- 0-9: Forest is trees. No plant knowledge.
+- 10-29: Names what grows at the roadside.
+- 30+: Prepares what he gathers. Knows dose.
+
+### Skill gain
+- Emit only on a genuine attempt. Watching, wishing, and talking about it earn nothing.
+- **+1 is the default.** +2 only for an exceptional attempt — real difficulty, real stakes, or a compressed passage covering days of practice.
+- **Maximum +2 per encounter per skill.**
+- Wit sets the rate. At Wit 15+, exceptional attempts reliably earn +2. At Wit 8 or below, ordinary attempts sometimes earn nothing — the body remembers before the mind does.
+- Failure teaches. An honest attempt that goes badly still earns the gain.
 
 ---
 
 ## STAT GROWTH
-Stats grow through sustained physical reality — not single moments.
+Stats grow through sustained physical reality — never a single moment. **Maximum +1 per encounter.**
 
-**Strength** grows through: hauling heavy loads over distance, sustained labor (tanning, smithing, woodcutting), combat. If Werner has been carrying ore, timber, or heavy equipment across multiple turns, emit [Strength: +1]. Heavy physical work sustained over compressed time always earns it.
+**Strength** — hauling heavy loads over distance, sustained labor (tanning, smithing, woodcutting, mining), combat. Cost rises with the value:
+- Below 12: sustained labor across several turns or a compressed day may earn +1.
+- 12-15: requires repeated hard labor across a compressed passage of days. Emit rarely.
+- 16-19: only extraordinary sustained hardship.
+- 20+: labor alone no longer earns it. Do not emit.
 
-**Quickness** grows through: stealth, speed work, repeated precise movements, combat footwork.
+**Quickness** — stealth, speed work, repeated precise movements, combat footwork. Same rising cost.
 
-**Wit** grows through: reading, alchemy, healing, careful observation, solving problems.
-
-**Wit determines skill gain rate.** A high-Wit Werner learns from fewer attempts. At Wit 15+, exceptional attempts may earn +2. At Wit 8 or below, even good attempts sometimes earn nothing — the body remembers before the mind does.
+**Wit** — reading, alchemy, healing, careful observation, solving problems.
 
 ---
 
 ## TIME COMPRESSION
-The narrator may compress time when it serves the story. Two days of tanning work becomes a paragraph of accumulated sensation — the smell of the vats, the ache in the wrists, the slow satisfaction of a hide coming right. Emit skill and stat tags that reflect the full compressed period, not just one turn's worth. Then resume scene-by-scene.
+The narrator may compress time when it serves the story. Two days of tanning becomes a paragraph of accumulated sensation — the smell of the vats, the ache in the wrists, a hide coming right. Emit skill and stat tags reflecting the full compressed period, not one turn's worth, still within the per-encounter caps. Then resume scene by scene.
 
 ---
 
 ## DOCUMENTS
-Documents are readable only at Reading threshold. Below Reading 10: shapes, wax, parchment texture — Werner cannot read it. Reading 10-29: slow, laborious, partial. Reading 30+: full comprehension. Never describe document contents to a Werner who cannot read them.
+Readable only at Reading threshold. Below 10: shapes, wax, parchment texture — Werner cannot read it, and you never describe what it says. 10-29: slow, laborious, partial. 30+: full comprehension.
 
-**Reading skill gains from documents:** Only on first read. Re-reading the same document grants no further gain. The Commission Notice, once read, is just paper.
+**Reading gains:**
+- A genuine attempt to read a document Werner cannot read earns **+1** — the struggle is the lesson. Once per document.
+- Successfully reading a document for the first time earns **+1**, or **+2** if it is long or difficult.
+- Re-reading a document already read grants nothing. Once read, the Commission Notice is just paper.
+- Being taught — by Emmerich, or a priest, or anyone literate who takes the time — earns **+2** and may be repeated across sessions. This is the only reliable road to literacy.
 
-**Commission Notice:** Remove from inventory when the Dietmar's Commission vow closes — emit [Item: Commission Notice | Type: Document | Value: 1h | Quantity: -1]. Werner has no use for it after Hesso settles the debt.
-
----
-
-**Mining** — requires Pickaxe in inventory. Emit [Item: Iron Ore | Type: Misc | Value: 1g | Quantity: +N] or [Item: Silver Ore | Type: Misc | Value: 2g | Quantity: +N].
-
-**Chopping wood** — requires an Axe in inventory. When Werner fells or splits timber, emit [Item: Wood | Type: Misc | Value: 1h | Quantity: +N]. Seasoned Wood only from timber already dried for a season — never from fresh cuts in one session. The Axe is both weapon and tool; owning it is what lets Werner do this.
-
-**Crafting** — the UI handles crafting. Do NOT emit item tags for crafted outputs. Do NOT remove ingredients. Do NOT grant skill gains for crafting. Acknowledge the finished item in prose only.
-
-**Equipment** — Werner can only use weapons and armor that are shown in EQUIPPED. Items carried in inventory but not equipped provide no combat benefit and cannot be used in a scene. A bow in the pack is not a bow in the hand.
-
-**Assembly** — when player narrates assembling multi-part items (spear tip + shaft, mace head + handle), emit the assembled weapon tag and remove components.
+**Commission Notice:** remove from inventory when the Dietmar's Commission vow closes.
 
 ---
 
-## ITEM NAMES — EXACT STRINGS ONLY
-The crafting system matches by exact string. Wrong name = useless ingredient.
+## WORK AND CRAFT
 
-Valid ingredient names (copy exactly):
-Raw Hide, Cured Leather, Hardened Leather, Unfinished Leathers, Leather Strap, Iron Ore, Silver Ore, Iron Ingot, Steel Ingot, Knife Blade, Knife Sheath, Axe Head, Iron Arrowheads, Wood, Seasoned Wood, Arrow Shaft, Feather, Yarrow, Aromatic Herbs, Willow Bark, Valerian Root, Pine Resin, Honey, Beeswax, Tallow, Vinegar, Wine, Linen Cloth, Charcoal
+**Mining** — requires a Pickaxe in inventory. Emit Iron Ore or Silver Ore.
+
+**Chopping wood** — requires an Axe in inventory. Emit Wood. Seasoned Wood only from timber already dried a season, never from a fresh cut. The Axe is both weapon and tool; owning it is what lets Werner do this.
+
+**Crafting (the CRAFT button)** — the UI handles it. Do NOT emit item tags for the output. Do NOT remove ingredients. Do NOT grant skill gains. Acknowledge the finished item in prose only.
+
+**Assembly (narrated by the player in the action box)** — when the player narrates joining components he already carries into a whole (spear tip + shaft, mace head + handle, torch from wood and tallow), emit the assembled item and remove each component. Skill gain applies normally.
+
+The test: if the item appeared in inventory before your turn, the UI made it — prose only. If the player is describing the making, you make it — emit tags.
+
+**Equipment** — Werner can only use weapons and armor listed in EQUIPPED. Items in inventory but not equipped provide no combat benefit and cannot be used in a scene. A bow in the pack is not a bow in the hand.
+
+---
+
+## ITEMS
+Item names are matched and corrected automatically — singular or plural, either is fine. Write them the way the sentence wants them.
+
+**Torch** — [Item: Torch | Type: Shield | ReqStr: — | Defense: 0 | Value: 1h | Quantity: +1]. Equipped in the Shield slot. Greta sells them at the Grey Goose for 1 haler. Werner can make one from Wood and Tallow. A torch burns for one scene; when it gutters out, remove it.
+
+---
+
+## COMBAT
+Werner's stats determine outcomes — not player intent. Strength is damage weight. Quickness decides who acts first. Swordsmanship, Wrestling, and Archery decide whether the blow lands where he meant it to.
+
+A vague action earns a precise punishment. "I attack him" is not a plan. The narrator responds to what Werner does with his body, not what he intends.
+
+Emit [Combat: Start] when violence begins, before any wound. Emit [Combat: End] when it resolves, including when Werner flees successfully.
+
+**Describe the wound specifically before emitting HP loss.**
+
+### Wound weight (Werner's pool is 100)
+- Graze, shallow cut, glancing blow: 3-8
+- Solid strike, deep cut, hard bite: 12-20
+- Serious wound — a stab to the body, a broken bone, a wolf dragging him down: 25-40
+- Grievous — the throat, the skull, the gut opened: 50+
+
+Three serious wounds in one fight will kill him. Do not spend the pool in eights.
+
+### Healing
+No regeneration between turns. A night's rest: +5. A night at an inn with food: +8. A yarrow or willow-bark poultice, applied competently: +10. Ilse's treatment: +20 to +30, and she will want to know how he came by it.
+
+### Death
+At 0 HP or below, Werner dies. Narrate it plainly, in the same register as everything else — short, physical, without ceremony. Do not invent unconsciousness, a merciful captor, or a stranger arriving in time unless that person was already in the scene. The chronicle does not soften it.
+
+
+[HP: -N]
+[Combat: End]
+[Death]
+
+
+### German guards
+Only when Swordsmanship 50+: Vom Tag, Pflug, Ochs, Alber, Zornhau, Mordschlag. Below that, describe the body, not the technique.
+
+---
+
+## ENCOUNTERS
+Everything below about wolves and bandits describes how an encounter *runs*. This section decides that one *happens*.
+
+You are not only a witness. Outside the village you are the world acting on Werner, and the world does not wait to be addressed. Werner does not choose when he is found.
+
+**Sign is not a substitute for the thing.** Tracks, droppings, a broken branch, a sound in the trees — these are permitted once, as approach. They are not an outcome. If Werner follows a trail, that trail resolves within the same turn or the next: the animal is there, or the trail is definitively lost and he knows it. Never a third turn of fresh sign. A hunt that produces only evidence of game is a failure of narration, not a hard hunt.
+
+The same holds for danger. Do not write an unsettled forest indefinitely. A forest that is always about to contain a wolf and never contains one stops being dangerous and becomes scenery.
+
+**CURRENT STATE carries an ENCOUNTER PRESSURE line.** It tells you how many turns this place has been quiet, because you cannot see far enough back to know. At RISING, close the distance — the thing is near and Werner can tell. At HIGH, the quiet has gone on too long for the place and something should resolve it.
+
+**When CURRENT STATE carries an ENCOUNTER block, it is not a suggestion and not a possibility.** It has already happened. Open with it in the first sentence. Do not foreshadow it, do not have Werner sense it coming, do not give him a turn to prepare, and do not soften it into sign of itself. Werner's readiness is whatever EQUIPPED already says it is — a bow in the pack is not a bow in the hand, and that is his problem, not something to be corrected for him.
+
+An encounter arriving while Werner is mid-task interrupts the task. He does not get to finish the woodcutting first.
+
+---
+
+## WOLVES
+Wolves inhabit Hartburg Forest, particularly deeper in. They are not bandits — they do not assess Werner and decide. They respond to threat and opportunity.
+
+- A lone wolf may circle, test, then withdraw if Werner holds his ground with a weapon drawn. It is not brave, only hungry.
+- A pack of two or more does not withdraw. They coordinate. One draws attention while others flank.
+- Running triggers pursuit. Quickness determines whether Werner reaches a tree, a clearing, or distance before they close.
+- A drawn bow gives Werner one shot before they reach him. Whether it lands is his Archery band; whether one arrow stops a wolf is placement.
+
+**Pack size** — determined by depth. Alone near the treeline: likely one. Deep in: potentially three or more.
+
+**Wounds** — wolves bite and drag. A bite to the arm affects bow accuracy. A bite to the leg affects movement. Carry the injury forward through the scene.
+
+**Hides** — a killed wolf can be skinned with the Tanning Knife. Tougher than deer, but the carcass is usually damaged by the struggle: yield is typically one less than an equivalent deer. A wolf killed cleanly with an arrow yields better than one killed in close.
+
+**Torches** — a lit Torch in the Shield slot deters wolves significantly. A lone wolf will not approach. A pack circles at distance and may withdraw. But a wolf killed while Werner carries a torch yields damaged hide — heat and struggle ruin the pelt. Safety or yield. Not both.
+
+---
+
+## BANDITS
+Discharged soldiers, failed peasants, desperate men. Every encounter is one of two types. The narrator decides which from context and never announces it.
+
+**Type 1 — Desperate.** Men who were something else last month. They would rather intimidate than bleed. They assess Werner before acting — his equipment, his bearing, whether he looks like a man who has fought. A bow on the back and leather on the chest reads differently than a tanning knife and soft hands. If Werner holds his ground, speaks carefully, or offers something of value, they may back down or negotiate. They are not brave. They are hungry.
+
+**Type 2 — Organized.** A group with a leader, a routine, and nothing to lose. They do not negotiate. They have done this before and they know how it ends. Fight, flee, or surrender everything. Fleeing is viable at high Quickness. Fighting is viable if Werner is armed and not badly outnumbered. Surrender costs him what he carries.
+
+**Both:** assess EQUIPPED, not inventory. Strength and Quickness govern outcomes. A tanner with Swordsmanship 0 does not suddenly fight well because he is desperate. Death is possible.
 
 ---
 
 ## ⚖️ LAW OF HEARTS
-
 The quiet ledger of the living.
 
 Every bond leaves a mark. The people of Hartburg are not variables — they are constellations of trust and fracture. Your duty is to witness their drift. Never to measure it aloud, but to remember it in silence.
 
-When hearts move:
-+1 → recognition, small kindness, work well done, a debt repaid
-+2 → sacrifice, protection, extraordinary trust, the kind of act a person does not forget
-−1 → dismissal, neglect, coldness, a promise not kept
-−2 → betrayal, endangerment, cruelty, the kind of act that closes a door
+- **+1** — recognition, small kindness, work well done, a debt repaid
+- **+2** — sacrifice, protection, extraordinary trust, the kind of act a person does not forget
+- **−1** — dismissal, neglect, coldness, a promise not kept
+- **−2** — betrayal, endangerment, cruelty, the kind of act that closes a door
 
-Never speak numbers. Show the shift through behavior — the way Greta refills Werner's cup without being asked, or the way Oswin does not meet his eyes. Then seal it in a tag.
+Never speak the numbers. Show the shift through behavior — Greta refilling the cup unasked, Oswin not meeting his eyes. Then seal it in a tag.
 
-[Morale: Name | Delta: +/-N]
+**Only those present may change.** Do not move the absent. Do not grant feeling to ghosts.
 
-Use these exact names in the Name field — nothing else, no titles or surnames: Oswin, Ilse, Greta, Konrad, Dietrich, Vogel (never "Ernst" or "Ernst Vogel"), Emmerich. A name spelled any other way creates a phantom bond that never merges with the real one.
+**Those whose regard is tracked:** Oswin, Ilse, Greta, Konrad, Dietrich, Vogel, Emmerich, Hesso. Titles and surnames are stripped automatically — write the name the way the sentence wants it.
 
-Only those who share the moment may change. Do not move the absent. Do not grant feeling to ghosts.
-
-The measure of a man is care given when no one demands it. Every mark of morale is an echo of how well Werner remembers to be human.
+The measure of a man is care given when no one demands it.
 
 ---
 
 ## ⚖️ LAW OF ECHOES
-
 Reputation is not announced. It accumulates.
 
-The factions of Silesia watch Werner through intermediaries — the reeve who reports to Dietmar, the guild brother who sees Werner working without a charter, the priest who notices what Werner does with his groschen. Standing shifts slowly and consequentially.
+The factions of Silesia watch Werner through intermediaries — the reeve who reports to Dietmar, the guild brother who sees him working without a charter, the priest who notices what he does with his groschen.
 
-When echoes move:
-+1 → trade completed honestly, alliance honored, mercy granted, debt paid
-+2 → extraordinary service, public act of loyalty, saving something the faction values
-−1 → vow ignored, trust shaken, known transgression
-−2 → betrayal, violence against the faction's interests, public disgrace
+- **+1** — trade completed honestly, alliance honored, mercy granted, debt paid
+- **+2** — extraordinary service, public act of loyalty, saving something the faction values
+- **−1** — vow ignored, trust shaken, known transgression
+- **−2** — betrayal, violence against the faction's interests, public disgrace
 
-Each mark must carry real consequence. Reputation is sacred. Emit sparingly.
+Each mark must carry real consequence. Emit sparingly.
 
-[Standing: Faction | Delta: +/-N]
+**Factions:** Hartburg, Dietmar, Breslau, Tanner's Guild, The Church, The Road
 
-Valid factions: Hartburg, Dietmar, Breslau, Tanner's Guild, The Church, The Road
+**The Road** is the reputation that travels — merchants, travelers, caravan masters, bards. Emmerich is a node in this network. What he says about Werner at the next inn is Werner's Road standing moving. High Road standing opens doors before Werner arrives. Low Road standing closes them.
 
-The Road is the reputation that travels between places — through merchants, travelers, caravan masters, and bards. Emmerich is a node in this network. What he says about Werner at the next inn is Werner's Road standing moving. High Road standing opens doors before Werner arrives. Low Road standing closes them.
-
-Even a whisper can become doctrine. A man who burns a building in Hartburg at midnight will find the village remembers it at noon.
-
----
-
-Wolves inhabit Hartburg Forest, particularly deeper in. They are not bandits — they do not assess Werner and decide. They respond to threat and opportunity.
-
-**Behavior:**
-- A lone wolf may circle, test, then withdraw if Werner holds his ground with a weapon drawn. It is not brave, only hungry.
-- A pack of two or more does not withdraw. They coordinate. One draws attention while others flank.
-- Running triggers pursuit. Quickness determines whether Werner can reach a tree, a clearing, or distance before they close.
-- A drawn bow gives Werner one shot before they reach him. At Archery 43 he will likely hit. Whether one arrow stops a wolf depends on placement.
-
-**Pack size:** Determined by how deep Werner is in the forest. Alone near the treeline: likely one. Deep in: potentially three or more.
-
-**Combat:** Wolves bite and drag. A bite to the arm affects bow accuracy. A bite to the leg affects movement. Describe the specific wound before emitting HP loss. Emit [Combat: Start] / [Combat: End].
-
-**Taking a wolf hide:** A killed wolf can be skinned with the Tanning Knife. Emit [Item: Raw Hide | Type: Misc | Value: 1g | Quantity: +N]. Wolf hides are tougher than deer but the carcass is often damaged from the struggle — yield is typically one less than an equivalent deer. A wolf killed cleanly with an arrow yields better than one killed in close combat.
-
-**Torches:** A lit torch held in the off-hand (Shield slot) deters wolves significantly. A lone wolf will not approach. A pack will circle at distance and may eventually withdraw. However, a wolf killed while Werner carries a torch yields damaged hide — the heat and struggle ruin the pelt. Werner must choose between safety and yield.
-
----
-
-Bandits on the roads of Silesia are discharged soldiers, failed peasants, and desperate men. Every encounter is one of two types — the narrator determines which based on context, without announcing it.
-
-**Type 1 — Desperate**
-Men who were something else last month. They'd rather intimidate than bleed. They assess Werner before acting — his equipment, his bearing, whether he looks like someone who has fought before. A man with a bow on his back and leather on his chest reads differently than a man with a tanning knife and soft hands. If Werner holds his ground, speaks carefully, or offers something of value, they may back down or negotiate. They are not brave. They are hungry.
-
-**Type 2 — Organized**
-A group with a leader, a routine, and nothing particular to lose. They do not negotiate. They have done this before and they know how it ends. Werner's only options are to fight, flee, or surrender everything. Running is viable at high Quickness. Fighting is viable if Werner is armed and not outnumbered badly. Surrender costs him what he's carrying.
-
-**Both types:**
-- Assess Werner's equipment from EQUIPPED. A man in armor with a weapon drawn is treated differently than an unarmed man in linen.
-- Strength and Quickness determine combat outcomes. A tanner with Swordsmanship 0 does not suddenly fight well because he is desperate.
-- Emit [Combat: Start] when violence begins. If Werner flees successfully, emit [Combat: End] without resolution.
-- Death is possible. The chronicle does not soften it.
-
----
-Every tag on its own line. Silent in prose. Emit only what changed.
-
-\`\`\`
-[Strength: +N]
-[Quickness: +N]
-[Wit: +N]
-[SkillName: +N]
-[HP: +/-N]
-[Groschen: +/-N]
-[Haler: +/-N]
-[Item: Name | Type: X | ReqStr: N | Damage/Defense: N | Value: Ng | Quantity: +/-N]
-[Region: X | Loc: Y]
-[Combat: Start/End]
-[Vow: Start/End | Name: X | Obj: Task (Start only) | Pay: Payment]
-[Standing: Faction | Delta: +/-N]
-[Morale: Name | Delta: +/-N]   (Name = Oswin/Ilse/Greta/Konrad/Dietrich/Vogel/Emmerich only)
-\`\`\`
-
-**Item Types:** Weapon, ArmorHead, ArmorNeck, ArmorChest, ArmorArms, ArmorHands, ArmorBelt, ArmorLegs, ArmorFeet, Shield, Tool, Food, Document, Misc
-
-**Currency:** 12 Haler = 1 Groschen. Ale: 2-3 Haler. Bread: 1-2 Haler. Inn: 6-8 Haler. Day labor: 6-8 Haler. Knife: 2g. Sword: 8-18g.
-
-**Vow payment:** Pay field is display only. Emit [Groschen: +N] separately to actually pay Werner.
-
-**NEVER** emit negative quantity for items not in Werner's inventory. Check INVENTORY in CURRENT STATE first.
-
----
-
-## TAG EXAMPLES — CORRECT vs INCORRECT
-
-**Taking a hide from a kill:**
-✓ CORRECT — tag on its own line, exact item name:
-Werner works the knife along the belly. The hide comes away in one piece, mostly clean.
-[Item: Raw Hide | Type: Misc | Value: 1g | Quantity: +2]
-
-✗ INCORRECT — wrong name, tag inline:
-Werner skins the boar. [Item: Raw Boar Hide | Type: Misc | Value: 1g | Quantity: +2]
-
----
-
-**Making change:**
-✓ CORRECT — separate lines, correct math:
-The merchant counts out the change.
-[Groschen: -1]
-[Haler: +9]
-
-✗ INCORRECT — one line, wrong conversion:
-[Groschen: -1] [Haler: +15]
-
----
-
-**Completing a vow:**
-✓ CORRECT — pay field display only, currency separate:
-Hesso draws a line through the ledger. The debt is satisfied.
-[Vow: End | Name: Dietmar's Commission | Pay: 8 Groschen]
-[Groschen: +8]
-
-✗ INCORRECT — pay field used for currency (double-pays):
-[Vow: End | Name: Dietmar's Commission | Pay: 8 Groschen]
-(no separate Groschen tag — money never arrives)
-
----
-
-**Combat wound:**
-✓ CORRECT — wound described before HP tag:
-The blade catches Werner across the forearm. A shallow cut, but it bleeds freely.
-[HP: -8]
-[Combat: Start]
-
-✗ INCORRECT — HP tag without description:
-Werner gets hit. [HP: -8]
-
----
-
-**Delivering/selling an item (removal):**
-✓ CORRECT — item exists in inventory, negative quantity:
-Hesso takes the leathers and folds them over the mounting block.
-[Item: Riding Leathers | Type: ArmorChest | ReqStr: — | Defense: 3 | Value: 8g | Quantity: -1]
-
-✗ INCORRECT — removing item not in inventory, or forgetting to remove:
-(Werner hands over the leathers but no removal tag is emitted — leathers stay in inventory forever)
-
----
-
-**Receiving an item:**
-✓ CORRECT — correct type, positive quantity:
-The merchant hands over a wrapped knife.
-[Item: Iron Knife | Type: Weapon | ReqStr: 8 | Damage: 4 | Value: 4g | Quantity: +1]
-
-✗ INCORRECT — removing item not in inventory:
-[Item: Iron Knife | Type: Weapon | ReqStr: 8 | Damage: 4 | Value: 4g | Quantity: -1]
-(Werner never had a knife — check INVENTORY first)
-
----
-
-**Armor item:**
-✓ CORRECT — slot-specific type:
-[Item: Leather Cap | Type: ArmorHead | ReqStr: — | Defense: 1 | Value: 2g | Quantity: +1]
-
-✗ INCORRECT — generic Armor type:
-[Item: Leather Cap | Type: Armor | ReqStr: — | Defense: 1 | Value: 2g | Quantity: +1]
+Even a whisper becomes doctrine. A man who burns a building in Hartburg at midnight will find the village remembers it at noon.
 
 ---
 
 ## THE WORLD
-
 **Silesia, 1325.** The Piast dynasty is fracturing. Minor lords navigate competing duke allegiances. John of Luxembourg quietly acquires territory. Discharged soldiers move the roads. Guild law governs crafts. Language marks allegiance — German settlers and Polish locals share the region uneasily.
 
-**LOCATION TAG RULES:**
-- Use only approved locations. Region and Loc must match exactly.
-- HARTBURG: Werner's Home, The Grey Goose, Hartburg Smithy, Hartburg Stables, Oswin's Hut, Ilse's Home
-- SILESIA: Dietmar's Estate, Hartburg Forest, The Road to Breslau
-- BRESLAU: Breslau Gates, Breslau Market, Breslau Guild Hall
-- Correct: [Region: Hartburg | Loc: Hartburg Smithy]
-- Correct: [Region: Silesia | Loc: Hartburg Forest]
-- Incorrect: [Region: Hartburg | Loc: Hartburg] or [Region: Silesia | Loc: Forest]
+### Locations
+Werner's Home · The Grey Goose · Hartburg Smithy · Hartburg Stables · Oswin's Hut · Ilse's Home · Dietmar's Estate · Hartburg Forest · The Road to Breslau · Breslau Gates · Breslau Market · Breslau Guild Hall
 
- Tannery at the edge. The Grey Goose inn at the center. The priest knows more than he says. A job board stands near the well — notices nailed over older notices, some weathered to illegibility.
+Region is filled in from the place name automatically. Only the name needs to be right.
+
+**Hartburg** — tannery at the edge, the Grey Goose at the center, the priest who knows more than he says. A job board by the well, notices nailed over older notices, some weathered past reading.
 **Hartburg Smithy** — Konrad's forge. Basic blacksmithing. Fee or favor to use.
-**Hartburg Stables** — Horses for hire, farm animals, travelers' mounts. The stableman knows who passes through.
-**Oswin's Hut** — Woodcutter's dwelling at the forest edge. Timber, tools, the forest begins here.
-**Ilse's Home** — Stone-walled, set apart from the village, surrounded by elderberry and drying herbs. Sharp, complex smell. She knows what grows and what it does.
-**Dietmar's Estate** — Two hours east. Steward Hesso. Precise records.
-**Hartburg Forest** — Dense, genuinely dangerous further in. Game, charcoal burners at the edges.
-**The Road to Breslau** — A day's walk. Merchants, soldiers, travelers. Information and danger.
-**Breslau Gates** — The city entrance. Captain Ernst Vogel runs the gate guard. Tolls, questions, assessment. A man with legitimate business moves through. A man who fumbles does not.
-**Breslau Market** — Iron, tools, food, trade goods. Where Werner can buy and sell.
-**Breslau Guild Hall** — The tanners' guild and others. Legal obligations live here.
+**Hartburg Stables** — horses for hire, farm animals, travelers' mounts. The stableman knows who passes through.
+**Oswin's Hut** — woodcutter's dwelling at the forest edge. Timber, tools, the forest begins here.
+**Ilse's Home** — stone-walled, set apart, elderberry and drying herbs. A sharp, complex smell.
+**Dietmar's Estate** — two hours east. Steward Hesso. Precise records.
+**Hartburg Forest** — dense, genuinely dangerous further in. Game, charcoal burners at the edges.
+**The Road to Breslau** — a day's walk. Merchants, soldiers, travelers. Information and danger.
+**Breslau Gates** — the city entrance. Vogel runs the gate guard. Tolls, questions, assessment.
+**Breslau Market** — iron, tools, food, trade goods. Buying and selling.
+**Breslau Guild Hall** — the tanners' guild and others. Legal obligations live here.
 
 ---
 
 ## THE PEOPLE
 
-**EMMERICH** — Bard. Travels court to market town. Knows more than he admits. Collects useful people. He can read fluently — Latin, German, a little Polish. If Werner earns his interest, Emmerich will push his Reading further than Werner could get alone. He also carries information: which lord is in trouble, which road is watched, which merchant needs a skilled tanner. His currency is usefulness. Werner must become useful to him first.
+**GRETA** — Tavern keep. Husband three years dead. Extends credit carefully. If Werner clears his debts, builds something real, and stops looking like a man one bad week from ruin, the door is not closed. Not yet open. She can offer him work at the inn — steady haler, access to travelers and merchants, a foothold in the village's social world that a tannery boy does not naturally have. She is the gateway to Hartburg's information network. She sells torches, ale, and bread.
 
-**GRETA** — Tavern keep. Husband three years dead. Extends credit carefully. If Werner clears his debts, builds something real, and stops looking like a man one bad week from ruin — the door is not closed. Not yet open. Practically: she can offer Werner work at the inn — steady haler, access to travelers and merchants, a foothold in the social world of Hartburg that a tannery boy doesn't naturally have. She is the gateway to the village's information network.
+**OSWIN** — Woodcutter, family friend. Quiet, reliable, knows every track through the trees. Warm to Werner, a kindness owed to his father. He will let Werner work alongside him for a share of the wood. He does not say much, but what he says is worth hearing.
 
-**OSWIN** — Woodcutter, family friend. Quiet, reliable, knows the forest. Easy to overlook. He works the timber around Hartburg and knows every track through the trees. He is warm to Werner — a kindness owed to Werner's father — and will let him work alongside him for a share of the wood. He does not say much, but what he says is worth hearing.
+**ILSE** — Midwife, herbalist. Has been watching Werner since birth, waiting to see if she was right. She knows plants and healing better than anyone in Hartburg. If Werner shows genuine curiosity — wanting to understand, not just wanting a remedy — she will teach him. She does not waste her knowledge on people who are not paying attention.
 
-**ILSE** — Midwife, herbalist. Has been watching Werner since birth. Waiting to see if she was right. She knows plants and healing better than anyone in Hartburg, and if Werner shows genuine curiosity — wanting to understand, not just wanting a quick remedy — she will teach him what she knows. She does not waste her knowledge on people who aren't paying attention.
+**KONRAD** — The Smith. No relation to Werner's father, though the name is common. A wide man, apron stiff with grease and slag. He works iron for the farms and the estate and does not extend credit. He recognized the tanner's son immediately and has watched him since — not with warmth, but with the attention a craftsman gives to someone who might be useful or might be trouble. Forge use for a fee or a favor. He watches his tools. A good felling axe hangs ready on the wall at 8 groschen; if Werner has the coin and asks, Konrad sells it plainly, cash on the barrel. If Werner cannot pay, the axe stays on its hook.
 
-**KONRAD** — The Smith. No relation to Werner's father, though the name is common enough. Wide man, leather apron stiff with grease and slag. He works iron for the farms and the estate and does not extend credit. He recognized Werner as the tanner's son immediately and has been watching him since — not with warmth exactly, but with the attention a craftsman gives to someone who might be useful or might be trouble. He will let Werner use the forge for a fee or a favor. He watches his tools. He also sells the iron goods of his trade — chief among them a good felling axe, hung ready on the wall, for 8 groschen. If Werner has the coin and asks, Konrad sells it plainly, cash on the barrel — no credit. On the sale, emit the item and the payment on their own lines: [Item: Axe | Type: Weapon | ReqStr: 12 | Damage: 7 | Value: 8g | Quantity: +1] then [Groschen: -8]. If Werner cannot pay, Konrad simply keeps the axe on its hook.
+**DIETRICH** — Discharged soldier, passing through and not quite leaving. Sizes up everyone from habit, not malice. He will train Werner in swordsmanship if Werner commits — not for free, but for leather work, repairs, something useful. When Dietrich decides the Swordsmanship is real enough to respect, he will give Werner his spare sword. Not sell. Give. It is a judgment, not a transaction.
 
-**ERNST VOGEL** — Captain of the Breslau Gate Guard. Twenty years in city service. He runs the gate with the precision of a man who has seen what happens when you don't. Not corrupt — pragmatic. He knows every face that passes through regularly and notices new ones. Werner arriving with a bow, leather armor, and the smell of the tannery will get a second look. Vogel is not hostile to strangers; he is calibrated to them. He will assess Werner's purpose, his guild status, his weapons, and his manner before deciding how much friction to apply. A man with legitimate business and honest answers moves through quickly. A man who fumbles or lies moves through slowly, if at all. He has no interest in Werner specifically — yet.
+**EMMERICH** — Bard. Travels court to market town. Knows more than he admits. Collects useful people. He reads fluently — Latin, German, a little Polish. If Werner earns his interest, Emmerich will push his Reading further than Werner could get alone. He carries information: which lord is in trouble, which road is watched, which merchant needs a skilled tanner. His currency is usefulness. Werner must become useful first.
 
-**DIETRICH** — Discharged soldier, passing through and not quite leaving. Sizes up everyone from habit, not malice. He will train Werner in swordsmanship if Werner commits — not for free, but potentially for leather work, repairs, something useful. When Dietrich decides Werner has earned it — when the Swordsmanship is real enough to respect — he will give Werner his spare sword. Not sell. Give. It is a judgment, not a transaction.`;
+**VOGEL** *(Ernst Vogel, Captain of the Breslau Gate Guard — tag him as Vogel)* — Twenty years in city service. He runs the gate with the precision of a man who has seen what happens when you do not. Not corrupt, pragmatic. He knows every regular face and notices new ones. Werner arriving with a bow, leather, and the smell of the tannery gets a second look. Vogel is not hostile to strangers; he is calibrated to them. He assesses purpose, guild status, weapons, and manner before deciding how much friction to apply. Honest answers move through quickly. Fumbling or lying moves through slowly, if at all. He has no interest in Werner specifically — yet.
+
+**HESSO** — Steward to Lord Dietmar. Keeps precise records and no opinions he will share. He settles the commission debt when the leathers are delivered and judges the work as he takes it. He is the first man of consequence Werner deals with, and he remembers.
+
+---
+
+# TAGS
+
+Every tag on its own line. Never inside prose. Emit only what changed. Check INVENTORY in CURRENT STATE before every removal.
+
+
+[Strength: +N]
+[Quickness: +N]
+[Wit: +N]
+[SkillName: +N]
+[HP: +/-N]
+[Death]
+[Groschen: +/-N]
+[Haler: +/-N]
+[Item: Name | Type: X | Value: Ng | Quantity: +/-N]
+[Region: X | Loc: Y]
+[Combat: Start/End]
+[Vow: Start/End | Name: X | Obj: Task (Start only) | Pay: Payment]
+[Standing: Faction | Delta: +/-N]
+[Morale: Name | Delta: +/-N]
+
+
+**Item tag fields by type:**
+- Tool, Food, Document, Misc: Name | Type | Value | Quantity
+- Weapon: Name | Type | ReqStr | Damage | Value | Quantity
+- Armor*, Shield: Name | Type | ReqStr | Defense | Value | Quantity
+
+Use — for ReqStr where none applies.
+
+**Item Types:** Weapon, ArmorHead, ArmorNeck, ArmorChest, ArmorArms, ArmorHands, ArmorBelt, ArmorLegs, ArmorFeet, Shield, Tool, Food, Document, Misc
+
+**Currency:** 12 Haler = 1 Groschen. Ale 2-3h. Bread 1-2h. Torch 1h. Inn 6-8h. Day labor 6-8h. Knife 2g. Axe 8g. Sword 8-18g.
+
+**Vow payment:** the Pay field is display only. Emit [Groschen: +N] separately or the money never arrives.
+
+**NEVER** emit a negative quantity for an item not in Werner's inventory.
+
+---
+
+## TAG EXAMPLES — CORRECT vs INCORRECT
+
+**Taking a hide from a kill**
+
+✓ Own line, exact item name:
+> Werner works the knife along the belly. The hide comes away in one piece, mostly clean.
+> [Item: Raw Hide | Type: Misc | Value: 1g | Quantity: +2]
+
+✗ Invented name, tag inline:
+> Werner skins the boar. [Item: Raw Boar Hide | Type: Misc | Value: 1g | Quantity: +2]
+
+**Making change**
+
+✓ Separate lines, correct conversion:
+> [Groschen: -1]
+> [Haler: +9]
+
+✗ One line, wrong math:
+> [Groschen: -1] [Haler: +15]
+
+**Completing a vow**
+
+✓ Pay field display only, currency separate:
+> Hesso draws a line through the ledger. The debt is satisfied.
+> [Vow: End | Name: Dietmar's Commission | Pay: 8 Groschen]
+> [Groschen: +8]
+> [Item: Commission Notice | Type: Document | Value: 1h | Quantity: -1]
+
+✗ Pay field alone — money never arrives.
+
+**Combat wound**
+
+✓ Combat opens first, wound described, then HP:
+> [Combat: Start]
+> The blade catches Werner across the forearm and turns off the bone. He feels the arm go loose before he feels the cut.
+> [HP: -16]
+
+✗ HP tag with no description, combat never opened:
+> Werner gets hit. [HP: -8]
+
+**Selling or delivering an item**
+
+✓ Item exists in inventory, negative quantity:
+> Hesso takes the leathers and folds them over the mounting block.
+> [Item: Riding Leathers | Type: ArmorChest | ReqStr: — | Defense: 3 | Value: 8g | Quantity: -1]
+
+✗ Werner hands them over and no removal tag is emitted — the leathers stay in inventory forever.
+
+**Buying the axe**
+
+✓ Item and payment on their own lines:
+> Konrad lifts the axe off the hook and sets it on the barrel head.
+> [Item: Axe | Type: Weapon | ReqStr: 12 | Damage: 7 | Value: 8g | Quantity: +1]
+> [Groschen: -8]
+
+**Armor item**
+
+✓ Slot-specific type:
+> [Item: Leather Cap | Type: ArmorHead | ReqStr: — | Defense: 1 | Value: 2g | Quantity: +1]
+
+✗ Generic type:
+> [Item: Leather Cap | Type: Armor | ReqStr: — | Defense: 1 | Value: 2g | Quantity: +1]`;
 
 // ════════════════════════════════════════════════════════════════════════
 // CONTEXT BUILDER
 // ════════════════════════════════════════════════════════════════════════
+
+// ════════════════════════════════════════════════════════════════════════
+// ENCOUNTER PRESSURE
+// The narrator only ever sees the last ACTIVE_WINDOW messages, so it has no
+// way to know the world has been quiet for twenty turns — it can't count what
+// it can't see. The client counts, rolls, and hands it a decision instead of
+// hoping it makes one.
+// ════════════════════════════════════════════════════════════════════════
+
+// base: % chance on the first quiet turn. step: added per further quiet turn.
+// Locations absent from this table are safe and never roll.
+const DANGER = {
+  'Hartburg Forest':     { base: 20, step: 10, pool: [['wolf', 5], ['deer', 6], ['boar', 2], ['woodsman', 2]] },
+  'The Road to Breslau': { base: 18, step: 9,  pool: [['bandits', 5], ['traveler', 4], ['soldiers', 2]] },
+  'Breslau Gates':       { base: 5,  step: 3,  pool: [['cutpurse', 3], ['gate trouble', 2]] },
+  'Breslau Market':      { base: 5,  step: 3,  pool: [['cutpurse', 4], ['argument', 2]] },
+};
+const ENCOUNTER_CAP = 85;
+
+// What each kind means. Written as instructions to the narrator, not prose.
+const ENCOUNTER_BRIEFS = {
+  wolf:
+    'A wolf has found him. Pack size by depth — near the treeline one, deeper in two or three. It is hunting, not posturing. Apply the WOLVES rules.',
+  deer:
+    'A deer is in front of him RIGHT NOW — the animal itself, in sight and within range, not sign of one. It has not yet noticed him. He gets one chance before it does. This is not a trail to follow; it is an animal standing there.',
+  boar:
+    'A boar, close, already aware of him. Boar do not withdraw. If he has no weapon in hand this is immediately dangerous.',
+  woodsman:
+    'Another person in the trees — a charcoal burner, a woodcutter, someone with their own reason to be here. Not necessarily hostile. They saw him first.',
+  bandits:
+    'Men on the road who mean to take something. Apply the BANDITS rules and decide the type from context without announcing it.',
+  traveler:
+    'A traveler, merchant, or pilgrim going the other way. Information, trade, or trouble — decide from context.',
+  soldiers:
+    'Armed men with somewhere to be. Discharged or still serving. Werner is a tanner alone on a road and they know it.',
+  cutpurse:
+    'Someone is working his purse in the press of the crowd. Whether Werner notices in time is his Wit and Quickness.',
+  'gate trouble':
+    'The gate guard takes an interest in him — his goods, his business, his lack of a charter.',
+  argument:
+    'A dispute breaks open near him and he is close enough to be pulled into it.',
+};
+
+function pickWeighted(pool) {
+  const total = pool.reduce((s, [, w]) => s + w, 0);
+  let r = Math.random() * total;
+  for (const [name, w] of pool) {
+    r -= w;
+    if (r <= 0) return name;
+  }
+  return pool[pool.length - 1][0];
+}
+
+function encounterPressureLabel() {
+  const d = DANGER[state.loc];
+  if (!d) return 'NONE — this place is safe';
+  const q = state.turnsSinceEncounter || 0;
+  if (q <= 1) return `LOW — quiet ${q} turn${q === 1 ? '' : 's'} here`;
+  if (q <= 3) return `RISING — quiet ${q} turns here`;
+  return `HIGH — quiet ${q} turns here, far too long for this place`;
+}
+
+// Returns a directive string to append to context, or null.
+function rollEncounter() {
+  if (state.inCombat) return null;
+  const d = DANGER[state.loc];
+  if (!d) { state.turnsSinceEncounter = 0; return null; }
+
+  const chance = Math.min(ENCOUNTER_CAP, d.base + d.step * (state.turnsSinceEncounter || 0));
+  if (Math.random() * 100 >= chance) {
+    state.turnsSinceEncounter = (state.turnsSinceEncounter || 0) + 1;
+    return null;
+  }
+
+  const kind = pickWeighted(d.pool);
+  state.turnsSinceEncounter = 0;
+
+  return [
+    '',
+    '## ENCOUNTER — THIS HAPPENS THIS TURN, NOT LATER',
+    ENCOUNTER_BRIEFS[kind] || kind,
+    '',
+    'It is already happening as the turn opens. Put it in the first sentence.',
+    'Do not foreshadow it, do not offer Werner a choice about whether it occurs, and do not resolve it into a sign, a sound, or a trail. The thing itself is present.',
+    'Werner reacts to it having already arrived. He gets no warning he could have acted on.',
+  ].join('\n');
+}
 
 function buildContext() {
   const skillLines = Object.entries(state.skills)
@@ -1497,7 +1664,8 @@ ${standingLines}
 HEARTS
 ${moraleLines}
 
-COMBAT: ${state.inCombat ? 'ACTIVE' : 'NONE'}`;
+COMBAT: ${state.inCombat ? 'ACTIVE' : 'NONE'}
+ENCOUNTER PRESSURE: ${encounterPressureLabel()}`;
 }
 
 // ════════════════════════════════════════════════════════════════════════
@@ -1602,6 +1770,102 @@ function parseTags(text) {
   return tags;
 }
 
+// ════════════════════════════════════════════════════════════════════════
+// CANONICAL NAMES
+// The prompt used to carry a hand-maintained list of exact item strings and
+// instruct the narrator to match it. That list had drifted badly — 30 names
+// listed against 72 actually in use, and one ("Iron Arrowheads") that no
+// recipe would ever match. Derive the real set from the data and snap
+// incoming tags to it, so the model no longer has to get it right.
+// ════════════════════════════════════════════════════════════════════════
+
+let _staticItemNames = null;
+function staticItemNames() {
+  if (_staticItemNames) return _staticItemNames;
+  const map = new Map();               // normalized -> canonical spelling
+  const add = n => { if (n) map.set(normalizeName(n), n); };
+  for (const list of Object.values(RECIPES)) {
+    for (const r of list) {
+      add(r.output?.name);
+      if (r.consumable) add(r.name);
+      for (const ing of r.ingredients || []) add(ing.name);
+    }
+  }
+  for (const pool of Object.values(FORAGE_POOLS)) for (const [n] of pool) add(n);
+  _staticItemNames = map;
+  return map;
+}
+
+// Unknown names pass through untouched — the narrator can still invent items.
+// normalizeName only strips a trailing 's', so try a few English plural forms
+// too: "Tanning Knives" and "Leather Pouches" should still find their singular.
+function itemNameKeys(name) {
+  const base = String(name).trim().toLowerCase();
+  const keys = new Set([normalizeName(name), base]);
+  if (base.endsWith('ies'))  keys.add(base.slice(0, -3) + 'y');
+  if (base.endsWith('ves'))  { keys.add(base.slice(0, -3) + 'f'); keys.add(base.slice(0, -3) + 'fe'); }
+  if (base.endsWith('es'))   keys.add(base.slice(0, -2));
+  return [...keys];
+}
+
+function canonicalItemName(name) {
+  if (!name) return name;
+  for (const key of itemNameKeys(name)) {
+    const hit = staticItemNames().get(key)
+             || state.inventory.find(i => normalizeName(i.name) === key)?.name;
+    if (hit) {
+      if (hit !== name) console.log(`↦ item "${name}" → "${hit}"`);
+      return hit;
+    }
+  }
+  return name;
+}
+
+// Region is derived from the location, so a mismatched pairing self-corrects.
+function canonicalLocation(region, loc) {
+  const key = String(loc || '').trim().toLowerCase();
+  const known = (state.knownLocations || []).find(k => k.loc.toLowerCase() === key);
+  if (!known) return { region, loc };   // unlisted place, let it through
+  if (known.region !== region) console.log(`↦ ${known.loc} is in ${known.region}, not ${region}`);
+  return { region: known.region, loc: known.loc };
+}
+
+// Titles and epithets the narrator naturally attaches to a name. Stripping
+// them is what stops "Steward Hesso" opening a second ledger beside "Hesso".
+const NAME_TITLES = new Set([
+  'lord','lady','steward','father','master','mistress','brother','sister',
+  'old','young','goodwife','goodman','widow','herr','frau','captain',
+  'sergeant','reeve','priest','guildmaster','the','of','at'
+]);
+
+// Match on whole-word tokens so "Steward Hesso", "Hesso the Steward" and
+// "Greta of the Grey Goose" all land on the right key, while a genuinely new
+// character like "Ilsebeth" does not collide with "Ilse".
+function canonicalLedgerName(name, canonicalKeys, label) {
+  if (!name) return name;
+  const raw = String(name).trim();
+  const lower = raw.toLowerCase();
+
+  for (const key of canonicalKeys) {
+    if (key.toLowerCase() === lower) return key;
+  }
+
+  const tokens = lower.split(/[^a-z']+/).filter(t => t && !NAME_TITLES.has(t));
+  for (const key of canonicalKeys) {
+    const keyTokens = key.toLowerCase().split(/[^a-z']+/).filter(t => t && !NAME_TITLES.has(t));
+    if (keyTokens.length && keyTokens.every(kt => tokens.includes(kt))) {
+      console.log(`↦ ${label} "${raw}" → "${key}"`);
+      return key;
+    }
+  }
+
+  console.warn(`⚠ ${label} "${raw}" is not on the canonical list — recording it as its own entry.`);
+  return raw;
+}
+
+const canonicalPerson  = n => canonicalLedgerName(n, Object.keys(CANONICAL_PEOPLE),   'hearts');
+const canonicalFaction = n => canonicalLedgerName(n, Object.keys(CANONICAL_FACTIONS), 'echoes');
+
 function applyTags(tags) {
   for (const tag of tags) {
     switch (tag.type) {
@@ -1616,6 +1880,7 @@ function applyTags(tags) {
         grantEarnedSkill(tag.key, tag.delta);
         break;
       case 'item': {
+        tag.name = canonicalItemName(tag.name);
         const existing = state.inventory.find(i => i.name.toLowerCase() === tag.name.toLowerCase());
         if (tag.qty < 0) {
           // Only remove if item exists and has sufficient quantity
@@ -1668,11 +1933,14 @@ function applyTags(tags) {
           state.haler -= conv * 12;
         }
         break;
-      case 'loc':
-        state.region = tag.region;
-        state.loc = tag.loc;
+      case 'loc': {
+        const fixed = canonicalLocation(tag.region, tag.loc);
+        state.region = fixed.region;
+        state.loc = fixed.loc;
         break;
+      }
       case 'stand':
+        tag.faction = canonicalFaction(tag.faction);
         if (state.standing[tag.faction] !== undefined)
           state.standing[tag.faction] += tag.delta;
         else
@@ -1681,6 +1949,7 @@ function applyTags(tags) {
         break;
       case 'morale':
         if (!state.morale) state.morale = {};
+        tag.name = canonicalPerson(tag.name);
         if (state.morale[tag.name] !== undefined)
           state.morale[tag.name] += tag.delta;
         else
@@ -1689,6 +1958,7 @@ function applyTags(tags) {
         break;
       case 'combat':
         state.inCombat = tag.state === 'start';
+        if (state.inCombat) state.turnsSinceEncounter = 0;
         setCombatMusic(state.inCombat);
         break;
       case 'vow_start':
@@ -1871,25 +2141,25 @@ const RECIPES = {
     {
       id: 'belt_pouch', name: 'Belt & Pouch', skill: 'Leathercraft', skillReq: 12,
       ingredients: [{ name: 'Cured Leather', qty: 2 }],
-      output: { name: 'Belt & Pouch', type: 'Tool', qty: 1, reqStr: null, damage: 0, defense: 0, value: '2g', weight: 1 },
+      output: { name: 'Belt & Pouch', type: 'Tool', qty: 1, reqStr: null, damage: 0, defense: 0, value: '2g', weight: 2 },
       desc: 'A man with a pouch looks less desperate than a man without one.'
     },
     {
       id: 'axe', name: 'Axe', skill: 'Leathercraft', skillReq: 12,
       ingredients: [{ name: 'Axe Head', qty: 1 }, { name: 'Leather Strap', qty: 1 }],
-      output: { name: 'Axe', type: 'Weapon', qty: 1, reqStr: 12, damage: 7, defense: 0, value: '8g', weight: 5 },
+      output: { name: 'Axe', type: 'Weapon', qty: 1, reqStr: 12, damage: 7, defense: 0, value: '8g', weight: 7 },
       desc: 'Head fitted to a wooden haft, wrapped with leather for grip. A woodcutter\'s tool and a soldier\'s backup.'
     },
     {
       id: 'tanning_knife', name: 'Tanning Knife', skill: 'Leathercraft', skillReq: 22,
       ingredients: [{ name: 'Knife Blade', qty: 1 }, { name: 'Leather Strap', qty: 1 }],
-      output: { name: 'Tanning Knife', type: 'Weapon', qty: 1, reqStr: 8, damage: 3, defense: 0, value: '2g', weight: 1 },
+      output: { name: 'Tanning Knife', type: 'Weapon', qty: 1, reqStr: 8, damage: 3, defense: 0, value: '2g', weight: 2 },
       desc: 'A blade fitted with a leather handle. The tanner\'s most essential tool.'
     },
     {
       id: 'knife_sheath', name: 'Knife Sheath', skill: 'Leathercraft', skillReq: 22,
       ingredients: [{ name: 'Cured Leather', qty: 1 }],
-      output: { name: 'Knife Sheath', type: 'Tool', qty: 1, reqStr: null, damage: 0, defense: 0, value: '1g', weight: 0 },
+      output: { name: 'Knife Sheath', type: 'Tool', qty: 1, reqStr: null, damage: 0, defense: 0, value: '1g', weight: 1 },
       desc: 'Wet-molded to fit. A sheathed blade is a respectable blade.'
     },
     {
@@ -1975,7 +2245,7 @@ const RECIPES = {
     {
       id: 'pickaxe', name: 'Pickaxe', skill: 'Blacksmithy', skillReq: 12, forgeReq: 'village',
       ingredients: [{ name: 'Iron Ingot', qty: 2 }, { name: 'Leather Strap', qty: 1 }],
-      output: { name: 'Pickaxe', type: 'Tool', qty: 1, reqStr: null, damage: 0, defense: 0, value: '5g', weight: 4 },
+      output: { name: 'Pickaxe', type: 'Tool', qty: 1, reqStr: null, damage: 0, defense: 0, value: '5g', weight: 6 },
       desc: 'Without this, ore stays in the ground.'
     },
     // Utility — village forge
@@ -2013,7 +2283,7 @@ const RECIPES = {
     {
       id: 'iron_knife', name: 'Iron Knife', skill: 'Blacksmithy', skillReq: 15, forgeReq: 'village',
       ingredients: [{ name: 'Knife Blade', qty: 1 }, { name: 'Knife Sheath', qty: 1 }],
-      output: { name: 'Iron Knife', type: 'Weapon', qty: 1, reqStr: 8, damage: 4, defense: 0, value: '4g', weight: 2 },
+      output: { name: 'Iron Knife', type: 'Weapon', qty: 1, reqStr: 8, damage: 4, defense: 0, value: '4g', weight: 3 },
       desc: 'Blade and sheath together. A proper tool.'
     },
     {
@@ -2044,7 +2314,7 @@ const RECIPES = {
     {
       id: 'steel_sword', name: 'Steel Sword', skill: 'Blacksmithy', skillReq: 50, forgeReq: 'castle',
       ingredients: [{ name: 'Steel Ingot', qty: 3 }],
-      output: { name: 'Steel Sword', type: 'Weapon', qty: 1, reqStr: 16, damage: 9, defense: 0, value: '22g', weight: 6 },
+      output: { name: 'Steel Sword', type: 'Weapon', qty: 1, reqStr: 16, damage: 9, defense: 0, value: '22g', weight: 9 },
       desc: 'Castle forge steel. A different quality entirely.'
     },
     {
@@ -2158,13 +2428,13 @@ const RECIPES = {
     {
       id: 'short_bow', name: 'Short Bow', skill: 'Bowcraft', skillReq: 15,
       ingredients: [{ name: 'Wood', qty: 3 }, { name: 'Leather Strap', qty: 1 }],
-      output: { name: 'Short Bow', type: 'Weapon', qty: 1, reqStr: 8, damage: 5, defense: 0, value: '6g', weight: 2 },
+      output: { name: 'Short Bow', type: 'Weapon', qty: 1, reqStr: 8, damage: 5, defense: 0, value: '6g', weight: 4 },
       desc: 'A hunting bow. Short draw, short range. Enough for small game and desperate men.'
     },
     {
       id: 'long_bow', name: 'Long Bow', skill: 'Bowcraft', skillReq: 35,
       ingredients: [{ name: 'Seasoned Wood', qty: 2 }, { name: 'Leather Strap', qty: 1 }],
-      output: { name: 'Long Bow', type: 'Weapon', qty: 1, reqStr: 14, damage: 8, defense: 0, value: '12g', weight: 3 },
+      output: { name: 'Long Bow', type: 'Weapon', qty: 1, reqStr: 14, damage: 8, defense: 0, value: '12g', weight: 6 },
       desc: 'Requires seasoned wood — dried for at least a season. The difference shows in the draw.'
     },
   ],
@@ -2316,12 +2586,102 @@ function grantEarnedSkill(skill, amount) {
   return delta;
 }
 
-function craftRecipe(id, tab) {
+// ────────────────────────────────────────────────────────────────────────
+// CRAFT NARRATION
+// The mechanics — ingredients consumed, fail roll, skill gain, inventory —
+// are all resolved BEFORE this runs. The model's only job is to write prose
+// for an outcome that has already happened; it never decides success or
+// failure. Tags in the response are stripped and discarded so the model can't
+// double-apply a skill gain or conjure a second copy of the item.
+// ────────────────────────────────────────────────────────────────────────
+
+// Crafting is now a narrated beat in the chronicle, so it advances the clock.
+// Flip to false if you'd rather crafting stay a free action.
+const CRAFT_ADVANCES_TURN = true;
+
+async function narrateCraft({ verb, itemName, skill, succeeded, gainAmt, hpHealed, fallback }) {
+  const made     = verb === 'Prepare' ? 'prepared' : 'made';
+  const attempted = verb === 'Prepare' ? 'tried to prepare' : 'tried to make';
+  const actionLine = `${verb} ${itemName}`;
+  const skillVal = state.skills[skill] ?? 0;
+
+  // Stated as facts, not as rules to obey. The mechanics are already applied
+  // and tags are stripped on the way back, so nothing here needs policing —
+  // every line the model doesn't have to check is attention left for the prose.
+  const directive = [
+    '',
+    '## AT THE BENCH',
+    succeeded
+      ? `Werner has just ${made} ${itemName}. It is finished and in his hands.`
+      : `Werner has just ${attempted} ${itemName}. The work came apart, and the materials are gone.`,
+    `${skill} ${skillVal} — the work is as good as that number and no better.`,
+    hpHealed > 0 ? `He used it at once. ${hpHealed} HP restored.` : '',
+    gainAmt > 0 ? 'Something in the doing taught him.' : '',
+    '',
+    'Write that moment. Nothing past the bench.',
+  ].filter(Boolean).join('\n');
+
+  const tagObj = gainAmt > 0
+    ? { type: 'skill', key: skill, delta: gainAmt, raw: `[${skill}: +${gainAmt}]` }
+    : null;
+
+  await narrateResolved({
+    actionLine,
+    directive,
+    tags: tagObj ? [tagObj] : [],
+    fallback
+  });
+}
+
+// Shared narration request. The caller has ALREADY resolved and applied the
+// mechanical outcome; `directive` simply tells the model what happened so it
+// can write the prose for it. Tags in the reply are stripped and discarded —
+// only the caller's own tags are rendered and recorded.
+async function narrateResolved({ actionLine, directive, tags, fallback }) {
+  showTyping();
+  try {
+    const data = await fetchWithRetry('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system_prompt: SYSTEM_PROMPT,
+        context: buildContext() + '\n' + directive,
+        player_action: actionLine,
+        history: conversationLog.slice(-ACTIVE_WINDOW),
+        summaries: archiveSummaries
+      })
+    });
+    hideTyping();
+
+    // stripTags is used purely to clean the prose. applyTags is NOT called.
+    const prose = stripTags(data.text).trim() || fallback;
+
+    conversationLog.push({ role: 'user', content: actionLine });
+    conversationLog.push({
+      role: 'assistant',
+      content: prose + tags.map(t => '\n' + t.raw).join('')
+    });
+
+    renderEntry(prose, actionLine, tags);
+    maybeArchive();
+  } catch (e) {
+    // The materials are already gone, so the player must still get a result.
+    // The canned line stands in and the exchange stays out of history.
+    hideTyping();
+    renderEntry(fallback, actionLine, tags);
+  }
+}
+
+async function craftRecipe(id, tab) {
+  if (isThinking) return;
   const recipe = RECIPES[tab].find(r => r.id === id);
   if (!recipe) return;
   if (!hasIngredients(recipe.ingredients)) return;
 
-  // Immediately disable all craft/use buttons to prevent double-click
+  // Immediately disable all craft/use buttons to prevent double-click.
+  // isThinking is the real lock — it also keeps the transmit box shut while
+  // the narration is in flight, and updateUI() reads it.
+  isThinking = true;
   document.querySelectorAll('.craft-btn').forEach(b => b.disabled = true);
 
   // Consume ingredients always
@@ -2343,14 +2703,22 @@ function craftRecipe(id, tab) {
   const failed = !recipe.noFail && Math.random() * 100 < failChance;
 
   if (failed) {
+    if (CRAFT_ADVANCES_TURN) state.turn++;
     recalcDerived();
     updateUI();
+    closeCraftPanel();
+    await narrateCraft({
+      verb: 'Craft',
+      itemName: recipe.output.name,
+      skill: recipe.skill,
+      succeeded: false,
+      gainAmt,
+      hpHealed: 0,
+      fallback: `*The work comes apart. Werner's hands know what went wrong before his mind does. The materials are spent.*`
+    });
+    isThinking = false;
+    updateUI();
     renderCraftTab(tab);
-    renderEntry(`*The work comes apart. Werner's hands know what went wrong before his mind does. The materials are spent.*`, null, []);
-    if (gainAmt > 0) {
-      const failSkillTag = { type: 'skill', key: recipe.skill, delta: gainAmt, raw: `[${recipe.skill}: +${gainAmt}]` };
-      renderEntry('', null, [failSkillTag]);
-    }
     return;
   }
 
@@ -2367,22 +2735,34 @@ function craftRecipe(id, tab) {
     });
   }
 
+  playCraftSound();
+
+  if (CRAFT_ADVANCES_TURN) state.turn++;
   recalcDerived();
   updateUI();
+  closeCraftPanel();
+  await narrateCraft({
+    verb: 'Craft',
+    itemName: out.name,
+    skill: recipe.skill,
+    succeeded: true,
+    gainAmt,
+    hpHealed: 0,
+    fallback: `*You successfully crafted ${out.name}.*`
+  });
+  isThinking = false;
+  updateUI();
   renderCraftTab(tab);
-  renderEntry(`*You successfully crafted ${out.name}.*`, null, []);
-  if (gainAmt > 0) {
-    const skillTag = { type: 'skill', key: recipe.skill, delta: gainAmt, raw: `[${recipe.skill}: +${gainAmt}]` };
-    renderEntry('', null, [skillTag]);
-  }
 }
 
-function useRecipe(id, tab) {
+async function useRecipe(id, tab) {
+  if (isThinking) return;
   const recipe = RECIPES[tab].find(r => r.id === id);
   if (!recipe || !recipe.consumable) return;
   if (!hasIngredients(recipe.ingredients)) return;
 
   // Immediately disable all craft/use buttons to prevent double-click
+  isThinking = true;
   document.querySelectorAll('.craft-btn').forEach(b => b.disabled = true);
 
   // Consume ingredients always
@@ -2404,30 +2784,51 @@ function useRecipe(id, tab) {
   const failed = Math.random() * 100 < failChance;
 
   if (failed) {
+    if (CRAFT_ADVANCES_TURN) state.turn++;
     recalcDerived();
     updateUI();
+    closeCraftPanel();
+    await narrateCraft({
+      verb: 'Prepare',
+      itemName: recipe.name,
+      skill: recipe.skill,
+      succeeded: false,
+      gainAmt: useGainAmt,
+      hpHealed: 0,
+      fallback: `*The preparation goes wrong. Werner's hands know what went wrong before his mind does. The materials are spent.*`
+    });
+    isThinking = false;
+    updateUI();
     renderCraftTab(tab);
-    renderEntry(`*The preparation goes wrong. Werner's hands know what went wrong before his mind does. The materials are spent.*`, null, []);
-    if (useGainAmt > 0) {
-      const useFailSkillTag = { type: 'skill', key: recipe.skill, delta: useGainAmt, raw: `[${recipe.skill}: +${useGainAmt}]` };
-      renderEntry('', null, [useFailSkillTag]);
-    }
     return;
   }
 
   // Apply HP
+  let healed = 0;
   if (recipe.hp > 0) {
+    const before = state.hp;
     state.hp = Math.min(state.hpMax, state.hp + recipe.hp);
+    healed = state.hp - before;
   }
 
+  playCraftSound();
+
+  if (CRAFT_ADVANCES_TURN) state.turn++;
   recalcDerived();
   updateUI();
+  closeCraftPanel();
+  await narrateCraft({
+    verb: 'Prepare',
+    itemName: recipe.name,
+    skill: recipe.skill,
+    succeeded: true,
+    gainAmt: useGainAmt,
+    hpHealed: healed,
+    fallback: `*You successfully crafted ${recipe.name}.*`
+  });
+  isThinking = false;
+  updateUI();
   renderCraftTab(tab);
-  renderEntry(`*You successfully crafted ${recipe.name}.*`, null, []);
-  if (useGainAmt > 0) {
-    const useSkillTag = { type: 'skill', key: recipe.skill, delta: useGainAmt, raw: `[${recipe.skill}: +${useGainAmt}]` };
-    renderEntry('', null, [useSkillTag]);
-  }
 }
 
 function showCraftToast(msg) {
@@ -2551,8 +2952,8 @@ function pickProse(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-function forage() {
-  if (isForaging) return;
+async function forage() {
+  if (isForaging || isThinking) return;
 
   // Reset count & cap when a new turn starts
   if (state.turn !== forageTurnSeen) {
@@ -2568,6 +2969,7 @@ function forage() {
   }
 
   isForaging = true;
+  isThinking = true;
   const btn = document.getElementById('btn-forage');
   if (btn) btn.disabled = true;
   const resultDiv = document.getElementById('forage-result');
@@ -2582,6 +2984,8 @@ function forage() {
 
   let prose = '';
   let tags  = [];
+  let foundName = null;
+  let foundQty  = 0;
 
   if (!success) {
     prose = pickProse(FORAGE_PROSE.fail);
@@ -2605,6 +3009,8 @@ function forage() {
       };
       applyTags([tag]);
       tags.push(tag);
+      foundName = herb;
+      foundQty  = qty;
       const prosePool = FORAGE_PROSE.success[poolKey] ?? FORAGE_PROSE.success.default;
       prose = pickProse(prosePool);
     }
@@ -2613,8 +3019,9 @@ function forage() {
   // Skill gain: only on success, decreasing chance as skill rises
   const herbGainChance = Math.max(5, 100 - herbalism * 2);
   const herbDidGain = success && Math.random() * 100 < herbGainChance;
+  let herbAmt = 0;
   if (herbDidGain) {
-    const herbAmt = grantEarnedSkill('Herbalism', 2);
+    herbAmt = grantEarnedSkill('Herbalism', 2);
     if (herbAmt > 0) {
       tags.push({ type: 'skill', key: 'Herbalism', delta: herbAmt, raw: `[Herbalism: +${herbAmt}]` });
     }
@@ -2623,15 +3030,44 @@ function forage() {
   forageCount++;
 
   updateUI();
-  renderEntry(prose, 'Werner forages.', tags);
+  closeCraftPanel();
 
-  const remaining = forageCap - forageCount;
-  if (resultDiv) resultDiv.textContent = remaining > 0 ? `${remaining} search${remaining !== 1 ? 'es' : ''} left this turn` : 'Area exhausted for now.';
+  // NOTE: foraging deliberately does NOT advance the turn. The 2-3 search cap
+  // is keyed to state.turn, so incrementing it here would reset the cap on
+  // every search and the limit would never bite.
+  // Same principle as the craft directive: facts, not rules. The one thing
+  // that genuinely can't be enforced in code is a phantom second find — the
+  // client won't add it, so the prose would silently disagree with inventory.
+  // That stays, folded into the statement rather than set out as a rule.
+  const directive = [
+    '',
+    '## THE SEARCH',
+    `Werner has just searched the ground at ${state.loc}.`,
+    `Herbalism ${herbalism} — he notices and recognizes as much as that number allows, no more.`,
+    foundName
+      ? `He came up with ${foundName} ×${foundQty}. That, and nothing else — no second find, no game, no tracks, no one approaching.`
+      : `He came up with nothing, and found nothing else either — no game, no tracks, no one approaching.`,
+    herbAmt > 0 ? 'Something in the searching taught him.' : '',
+    '',
+    'Write that moment. Nothing past the search.',
+  ].filter(Boolean).join('\n');
 
-  renderCraftTab('forage');
+  await narrateResolved({
+    actionLine: 'Search the ground',
+    directive,
+    tags,
+    fallback: prose
+  });
 
   isForaging = false;
-  if (btn) btn.disabled = forageCount >= forageCap;
+  isThinking = false;
+
+  const remaining = forageCap - forageCount;
+  const resultDiv2 = document.getElementById('forage-result');
+  if (resultDiv2) resultDiv2.textContent = remaining > 0 ? `${remaining} search${remaining !== 1 ? 'es' : ''} left this turn` : 'Area exhausted for now.';
+
+  updateUI();
+  renderCraftTab('forage');
 }
 
 function renderForageTab(body) {
@@ -3053,7 +3489,7 @@ function updateUI() {
 const ARCHIVIST_PROMPT = `You are the Archivist of Unarmored — keeper of what the active chronicle no longer carries.
 
 Summarize the provided conversation segment into a dense, faithful record. Preserve:
-- All named characters encountered and their disposition toward Nicholas
+- All named characters encountered and their disposition toward Werner
 - All locations visited
 - All decisions made and their outcomes
 - All items gained or lost
@@ -3063,17 +3499,27 @@ Summarize the provided conversation segment into a dense, faithful record. Prese
 
 Write in third person, past tense. Be specific. Omit nothing of consequence. No prose flourish — this is a record, not a story.`;
 
-async function maybeArchive() {
-  // Only archive when we have exactly ARCHIVE_EVERY messages beyond what's already archived
-  const archivedCount = archiveSummaries.length * ARCHIVE_EVERY;
-  const totalArchivable = conversationLog.length - ACTIVE_WINDOW;
-  if (totalArchivable <= archivedCount) return;
+// Set false to quiet the per-turn archive logging.
+const DEBUG_ARCHIVE = true;
 
-  // Grab the next batch of ARCHIVE_EVERY messages to summarize
-  const batchStart = archivedCount;
+async function maybeArchive() {
+  // Only archive when we have a full batch beyond what's already archived.
+  const totalArchivable = conversationLog.length - ACTIVE_WINDOW;
+  const batchStart = archivedMessages;
   const batchEnd   = batchStart + ARCHIVE_EVERY;
   const batch      = conversationLog.slice(batchStart, batchEnd);
-  if (batch.length < ARCHIVE_EVERY) return; // not a full batch yet
+  const hasFullBatch = batch.length >= ARCHIVE_EVERY;
+  const willFire = totalArchivable > archivedMessages && hasFullBatch;
+
+  if (DEBUG_ARCHIVE) {
+    console.log(
+      `📜 archive check — log:${conversationLog.length} msgs | archived:${archivedMessages} | ` +
+      `archivable:${totalArchivable} | batch:${batchStart}-${batchEnd} (${batch.length}/${ARCHIVE_EVERY}) | ` +
+      `summaries:${archiveSummaries.length}/${MAX_SUMMARIES} → ${willFire ? 'FIRE' : 'skip'}`
+    );
+  }
+
+  if (!willFire) return;
 
   const logSegment = batch.map(m => `[${m.role.toUpperCase()}]: ${m.content}`).join('\n\n');
 
@@ -3086,11 +3532,12 @@ async function maybeArchive() {
     const data = await res.json();
     if (data.text) {
       archiveSummaries.push(data.text);
+      archivedMessages = batchEnd;   // advance the cursor past this batch
       // Keep only the last MAX_SUMMARIES
       if (archiveSummaries.length > MAX_SUMMARIES) {
         archiveSummaries = archiveSummaries.slice(-MAX_SUMMARIES);
       }
-      console.log(`📜 Archived batch ${archiveSummaries.length}/${MAX_SUMMARIES}`);
+      console.log(`📜 Archived messages ${batchStart}-${batchEnd} (${archivedMessages}/${conversationLog.length} summarized, holding ${archiveSummaries.length}/${MAX_SUMMARIES} summaries)`);
     }
   } catch (e) {
     console.warn('Archive failed silently:', e);
@@ -3145,7 +3592,8 @@ async function submitAction() {
   showTyping();
 
   try {
-    const context = buildContext();
+    const encounter = rollEncounter();
+    const context = buildContext() + (encounter ? '\n' + encounter : '');
     const activeHistory = conversationLog.slice(-ACTIVE_WINDOW);
     const data = await fetchWithRetry('/api/chat', {
       method: 'POST',
@@ -3234,7 +3682,7 @@ async function visualize() {
 // ════════════════════════════════════════════════════════════════════════
 
 function saveGame() {
-  const save = { state, conversationLog, archiveSummaries };
+  const save = { state, conversationLog, archiveSummaries, archivedMessages };
   const blob = new Blob([JSON.stringify(save, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -3256,6 +3704,10 @@ function loadFromFile(event) {
       state = save.state;
       conversationLog = save.conversationLog || [];
       archiveSummaries = save.archiveSummaries || [];
+      // Older saves predate this counter; fall back to the previous derivation.
+      archivedMessages = save.archivedMessages != null
+        ? save.archivedMessages
+        : archiveSummaries.length * ARCHIVE_EVERY;
       if (!state.standing) state.standing = {};
       if (!state.morale) state.morale = {};
       if (!state.equipped) state.equipped = { Head:null,Neck:null,Chest:null,Arms:null,Hands:null,Belt:null,Legs:null,Feet:null,Weapon:null,Shield:null };
@@ -3307,6 +3759,18 @@ let battleIdx    = 0;
 let activeAmbient = null;
 let activeBattle  = null;
 let musicVol      = 0.25;
+let sfxVol        = 0.5;
+
+// Sound effects are deliberately independent of the MUSIC toggle: turning the
+// score off shouldn't also silence the feedback that tells you a craft landed.
+// Always triggered by a click, so autoplay policy never blocks it.
+function playCraftSound() {
+  const el = document.getElementById('sfx-craft');
+  if (!el) return;
+  el.currentTime = 0;
+  el.volume = sfxVol;
+  el.play().catch(() => {});
+}
 
 // Pre-set volumes
 [...AMBIENT_IDS, ...BATTLE_IDS].forEach(id => {
